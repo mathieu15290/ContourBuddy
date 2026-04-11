@@ -51,7 +51,9 @@ const Index = () => {
     setContours(null);
 
     try {
-      const grid = await fetchElevationGrid(bounds, 50, (pct) => setProgress(pct));
+      // Higher resolution for smaller intervals
+      const resolution = interval <= 1 ? 150 : interval <= 5 ? 100 : interval <= 10 ? 75 : 50;
+      const grid = await fetchElevationGrid(bounds, resolution, (pct) => setProgress(pct));
       setMinElev(grid.minElev);
       setMaxElev(grid.maxElev);
 
