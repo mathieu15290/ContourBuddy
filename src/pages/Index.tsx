@@ -92,7 +92,7 @@ const Index = () => {
         <div className="flex items-center gap-2">
           <Mountain className="h-6 w-6 text-primary" />
           <h1 className="text-lg font-bold text-foreground tracking-tight">
-            TopoContour
+            ContourBuddy
           </h1>
         </div>
         <div className="flex-1 max-w-lg ml-4">
