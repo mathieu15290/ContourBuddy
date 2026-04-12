@@ -6,7 +6,7 @@ import { fetchElevationGrid } from "@/lib/elevation";
 import { generateContours, type ContourResult } from "@/lib/contours";
 import { exportGeoJSON, exportDXF, exportKML, exportPNG } from "@/lib/export-utils";
 import { useToast } from "@/hooks/use-toast";
-import { Mountain } from "lucide-react";
+import logo from "@/assets/logo.png";
 
 type Bounds = { south: number; north: number; west: number; east: number };
 
@@ -90,7 +90,7 @@ const Index = () => {
       {/* Header */}
       <header className="border-b border-border bg-card px-4 py-3 flex items-center gap-3 shrink-0">
         <div className="flex items-center gap-2">
-          <Mountain className="h-6 w-6 text-primary" />
+          <img src={logo} alt="Logo" className="h-8 w-8" />
           <h1 className="text-lg font-bold text-foreground tracking-tight">
             ContourBuddy
           </h1>

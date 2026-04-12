@@ -9,7 +9,6 @@ import {
 } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import {
-  Mountain,
   Download,
   FileJson,
   FileText,
@@ -18,6 +17,7 @@ import {
   Loader2,
 } from "lucide-react";
 import type { ContourResult } from "@/lib/contours";
+import logo from "@/assets/logo.png";
 
 interface Props {
   interval: number;
@@ -58,7 +58,7 @@ export function ControlPanel({
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
-            <Mountain className="h-4 w-4 text-primary" />
+            <img src={logo} alt="Logo" className="h-5 w-5" />
             Paramètres
           </CardTitle>
         </CardHeader>
@@ -95,10 +95,10 @@ export function ControlPanel({
                 Génération...
               </>
             ) : (
-              <>
-                <Mountain className="h-4 w-4" />
-                Générer les courbes
-              </>
+            <>
+              <img src={logo} alt="Logo" className="h-4 w-4" />
+              Générer les courbes
+            </>
             )}
           </Button>
 
