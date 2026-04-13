@@ -1,28 +1,40 @@
 
 
-## Problem
+# Profil d'élévation — Plan d'implémentation
 
-The `leaflet-draw` library loaded from CDN (`1.0.4`) has a known bug where `L.drawLocal.draw.handlers.rectangle.tooltip` references an undefined `type` variable, causing the rectangle drawing tool to crash on mouse move.
+## Fonctionnalité
+L'utilisateur dessine une ligne (polyline) sur la carte. L'application récupère les altitudes le long de cette ligne via l'API IGN et affiche un graphique de profil altimétrique (distance horizontale vs altitude).
 
-## Fix
+## Modifications
 
-1. **Install leaflet-draw as an npm package** instead of CDN to get a compatible version, or pin a working version.
-2. **Remove the CDN link** for `leaflet.draw.css` from `index.html` and import the CSS from the npm package.
-3. **Add a polyfill/patch** for the `readableArea` function if needed — the error occurs in the tooltip text generation when computing area units.
+### 1. Nouveau composant `ElevationProfile.tsx`
+- Graphique SVG responsive affichant le profil (axe X = distance cumulée en m/km, axe Y = altitude en m)
+- Affichage des valeurs min/max/dénivelé
+- Panneau rétractable en bas de la carte, avec bouton de fermeture
+- Tooltip au survol montrant altitude et distance
 
-Alternatively, the simplest fix: **switch from `leaflet-draw` to a custom rectangle drawing handler** using plain Leaflet mouse events (`mousedown`, `mousemove`, `mouseup` + `L.rectangle`). This removes the brittle dependency entirely and gives full control over the UX.
+### 2. Nouvelle fonction `fetchElevationAlongLine` dans `elevation.ts`
+- Prend un tableau de `[lat, lng]` (points de la polyline)
+- Interpole N points régulièrement espacés le long de la ligne (ex: 100-200 points)
+- Appelle l'API IGN existante par batch pour récupérer les altitudes
+- Retourne un tableau `{ distance: number, elevation: number }[]`
 
-## Recommended approach: Replace leaflet-draw with custom rectangle selection
+### 3. Modification de `ContourMap.tsx`
+- Ajouter un deuxième bouton de contrôle "Dessiner un profil" (icône ligne/📈)
+- Mode dessin polyline : click pour ajouter des points, double-click pour terminer
+- Afficher la polyline sur la carte
+- Passer les points dessinés au parent via un nouveau callback `onProfileLineDrawn`
 
-In `ContourMap.tsx`:
-- Remove all `leaflet-draw` imports and draw control setup
-- Implement a simple "Draw Rectangle" toggle button overlay
-- On activation, listen to map `mousedown` → `mousemove` → `mouseup` to create an `L.rectangle`
-- Call `onBoundsSelected` with the resulting bounds
-- Style the button to match the existing UI
+### 4. Modification de `Index.tsx`
+- Nouvel état pour les données du profil et la ligne dessinée
+- Appel à `fetchElevationAlongLine` quand une ligne est dessinée
+- Affichage du composant `ElevationProfile` en overlay en bas de la carte
 
-In `index.html`:
-- Remove the `leaflet.draw.css` CDN link
-
-This eliminates the dependency and the bug entirely.
+## Flux utilisateur
+1. Clic sur le bouton "Profil" dans les contrôles carte
+2. Clic sur la carte pour poser des points de la ligne
+3. Double-clic pour terminer le tracé
+4. Chargement des altitudes (indicateur de progression)
+5. Affichage du profil en bas de l'écran
+6. Bouton pour fermer/supprimer le profil
 
