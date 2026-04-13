@@ -88,6 +88,19 @@ const Index = () => {
     }
   }, [toast]);
 
+  const handleProfileLineDrawn = useCallback(async (waypoints: [number, number][]) => {
+    setProfileLoading(true);
+    setProfileData(null);
+    try {
+      const data = await fetchElevationAlongLine(waypoints, 150, () => {});
+      setProfileData(data);
+    } catch (err: any) {
+      toast({ title: "Erreur", description: err.message || "Erreur profil", variant: "destructive" });
+    } finally {
+      setProfileLoading(false);
+    }
+  }, [toast]);
+
   return (
     <div className="flex flex-col h-screen bg-background">
       {/* Header */}
@@ -146,7 +159,18 @@ const Index = () => {
             onBoundsSelected={handleBoundsSelected}
             selectedBounds={bounds}
             mapRef={mapContainerRef}
+            onProfileLineDrawn={handleProfileLineDrawn}
           />
+
+          {profileLoading && (
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-[1000] bg-card text-foreground text-sm px-4 py-2 rounded-md shadow-md border border-border">
+              Chargement du profil altimétrique...
+            </div>
+          )}
+
+          {profileData && !profileLoading && (
+            <ElevationProfile data={profileData} onClose={() => setProfileData(null)} />
+          )}
 
           {/* Mobile controls */}
           <div className="md:hidden absolute bottom-4 left-4 right-4 z-[1000]">
