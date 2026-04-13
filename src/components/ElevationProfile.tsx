@@ -5,16 +5,19 @@ import { Button } from "@/components/ui/button";
 export interface ProfilePoint {
   distance: number;
   elevation: number;
+  lat: number;
+  lon: number;
 }
 
 interface Props {
   data: ProfilePoint[];
   onClose: () => void;
+  onHoverPoint?: (point: ProfilePoint | null) => void;
 }
 
 const PADDING = { top: 20, right: 20, bottom: 35, left: 50 };
 
-export function ElevationProfile({ data, onClose }: Props) {
+export function ElevationProfile({ data, onClose, onHoverPoint }: Props) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [hover, setHover] = useState<{ x: number; point: ProfilePoint } | null>(null);
 
@@ -71,6 +74,7 @@ export function ElevationProfile({ data, onClose }: Props) {
       if (diff < minDiff) { minDiff = diff; closest = p; }
     }
     setHover({ x: mouseX, point: closest });
+    onHoverPoint?.(closest);
   };
 
   const yTicks = 5;
@@ -97,7 +101,7 @@ export function ElevationProfile({ data, onClose }: Props) {
         className="w-full"
         style={{ height: "180px" }}
         onMouseMove={handleMouseMove}
-        onMouseLeave={() => setHover(null)}
+        onMouseLeave={() => { setHover(null); onHoverPoint?.(null); }}
       >
         {/* Grid lines */}
         {Array.from({ length: yTicks + 1 }, (_, i) => {

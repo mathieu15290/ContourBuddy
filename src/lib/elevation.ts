@@ -77,6 +77,8 @@ function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
 export interface ProfilePoint {
   distance: number;
   elevation: number;
+  lat: number;
+  lon: number;
 }
 
 /**
@@ -132,7 +134,7 @@ export async function fetchElevationAlongLine(
     onProgress?.(Math.min(100, Math.round(((batchIndex + 1) / totalBatches) * 100)));
   }
 
-  return distances.map((d, i) => ({ distance: d, elevation: elevations[i] }));
+  return distances.map((d, i) => ({ distance: d, elevation: elevations[i], lat: lats[i], lon: lons[i] }));
 }
 
 export async function fetchElevationGrid(
