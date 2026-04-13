@@ -24,6 +24,7 @@ export function ContourMap({
   onBoundsSelected,
   selectedBounds,
   mapRef,
+  onProfileLineDrawn,
 }: Props) {
   const leafletMapRef = useRef<L.Map | null>(null);
   const contourLayerRef = useRef<L.LayerGroup | null>(null);
@@ -32,6 +33,13 @@ export function ContourMap({
   const drawingRef = useRef(false);
   const startLatLngRef = useRef<L.LatLng | null>(null);
   const tempRectRef = useRef<L.Rectangle | null>(null);
+
+  // Profile drawing state
+  const [drawingProfile, setDrawingProfile] = useState(false);
+  const drawingProfileRef = useRef(false);
+  const profilePointsRef = useRef<L.LatLng[]>([]);
+  const profilePolylineRef = useRef<L.Polyline | null>(null);
+  const profileMarkersRef = useRef<L.CircleMarker[]>([]);
 
   // Initialize map
   useEffect(() => {
@@ -70,10 +78,13 @@ export function ContourMap({
     const DrawControl = L.Control.extend({
       options: { position: "topleft" as L.ControlPosition },
       onAdd() {
-        const btn = L.DomUtil.create("div", "leaflet-bar");
-        btn.innerHTML = `<a href="#" title="Dessiner un rectangle" style="display:flex;align-items:center;justify-content:center;width:30px;height:30px;font-size:18px;cursor:pointer;background:white;" id="draw-rect-btn">▭</a>`;
-        L.DomEvent.disableClickPropagation(btn);
-        return btn;
+        const container = L.DomUtil.create("div", "leaflet-bar");
+        container.innerHTML = `
+          <a href="#" title="Dessiner un rectangle" style="display:flex;align-items:center;justify-content:center;width:30px;height:30px;font-size:18px;cursor:pointer;background:white;" id="draw-rect-btn">▭</a>
+          <a href="#" title="Dessiner un profil altimétrique" style="display:flex;align-items:center;justify-content:center;width:30px;height:30px;font-size:16px;cursor:pointer;background:white;" id="draw-profile-btn">📈</a>
+        `;
+        L.DomEvent.disableClickPropagation(container);
+        return container;
       },
     });
     new DrawControl().addTo(map);
