@@ -2,7 +2,8 @@ import { useState, useRef, useCallback } from "react";
 import { AddressSearch } from "@/components/AddressSearch";
 import { ContourMap } from "@/components/ContourMap";
 import { ControlPanel } from "@/components/ControlPanel";
-import { fetchElevationGrid } from "@/lib/elevation";
+import { ElevationProfile, type ProfilePoint } from "@/components/ElevationProfile";
+import { fetchElevationGrid, fetchElevationAlongLine } from "@/lib/elevation";
 import { generateContours, type ContourResult } from "@/lib/contours";
 import { exportGeoJSON, exportDXF, exportKML, exportPNG } from "@/lib/export-utils";
 import { useToast } from "@/hooks/use-toast";
@@ -20,6 +21,8 @@ const Index = () => {
   const [progress, setProgress] = useState(0);
   const [minElev, setMinElev] = useState(0);
   const [maxElev, setMaxElev] = useState(0);
+  const [profileData, setProfileData] = useState<ProfilePoint[] | null>(null);
+  const [profileLoading, setProfileLoading] = useState(false);
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const { toast } = useToast();
 
