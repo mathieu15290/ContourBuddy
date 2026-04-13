@@ -3,6 +3,13 @@ import L from "leaflet";
 import type { ContourResult } from "@/lib/contours";
 import { getContourColor } from "@/lib/contours";
 
+interface HighlightPoint {
+  lat: number;
+  lon: number;
+  elevation: number;
+  distance: number;
+}
+
 interface Props {
   center: [number, number];
   zoom: number;
@@ -13,6 +20,7 @@ interface Props {
   selectedBounds: { south: number; north: number; west: number; east: number } | null;
   mapRef: React.MutableRefObject<HTMLDivElement | null>;
   onProfileLineDrawn?: (waypoints: [number, number][]) => void;
+  highlightPoint?: HighlightPoint | null;
 }
 
 export function ContourMap({
@@ -25,6 +33,7 @@ export function ContourMap({
   selectedBounds,
   mapRef,
   onProfileLineDrawn,
+  highlightPoint,
 }: Props) {
   const leafletMapRef = useRef<L.Map | null>(null);
   const contourLayerRef = useRef<L.LayerGroup | null>(null);
@@ -215,6 +224,31 @@ export function ContourMap({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Highlight point on map from profile hover
+  const highlightMarkerRef = useRef<L.CircleMarker | null>(null);
+  useEffect(() => {
+    const map = leafletMapRef.current;
+    if (!map) return;
+    if (highlightMarkerRef.current) {
+      map.removeLayer(highlightMarkerRef.current);
+      highlightMarkerRef.current = null;
+    }
+    if (highlightPoint) {
+      const marker = L.circleMarker([highlightPoint.lat, highlightPoint.lon], {
+        radius: 7,
+        color: "#e74c3c",
+        fillColor: "#e74c3c",
+        fillOpacity: 1,
+        weight: 2,
+      }).addTo(map);
+      marker.bindTooltip(
+        `${Math.round(highlightPoint.elevation)}m — ${highlightPoint.distance >= 1000 ? (highlightPoint.distance / 1000).toFixed(1) + " km" : Math.round(highlightPoint.distance) + " m"}`,
+        { permanent: true, direction: "top", className: "highlight-tooltip" }
+      );
+      highlightMarkerRef.current = marker;
+    }
+  }, [highlightPoint]);
 
   // Update center/zoom
   useEffect(() => {

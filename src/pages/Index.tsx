@@ -23,6 +23,7 @@ const Index = () => {
   const [maxElev, setMaxElev] = useState(0);
   const [profileData, setProfileData] = useState<ProfilePoint[] | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
+  const [hoveredProfilePoint, setHoveredProfilePoint] = useState<ProfilePoint | null>(null);
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const { toast } = useToast();
 
@@ -160,6 +161,7 @@ const Index = () => {
             selectedBounds={bounds}
             mapRef={mapContainerRef}
             onProfileLineDrawn={handleProfileLineDrawn}
+            highlightPoint={hoveredProfilePoint}
           />
 
           {profileLoading && (
@@ -169,7 +171,7 @@ const Index = () => {
           )}
 
           {profileData && !profileLoading && (
-            <ElevationProfile data={profileData} onClose={() => setProfileData(null)} />
+            <ElevationProfile data={profileData} onClose={() => setProfileData(null)} onHoverPoint={setHoveredProfilePoint} />
           )}
 
           {/* Mobile controls */}
