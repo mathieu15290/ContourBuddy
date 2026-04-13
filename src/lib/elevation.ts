@@ -61,6 +61,80 @@ async function fetchElevationBatch(
   return json.elevations as number[];
 }
 
+/**
+ * Compute the distance in meters between two lat/lon points (Haversine).
+ */
+function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371000;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+export interface ProfilePoint {
+  distance: number;
+  elevation: number;
+}
+
+/**
+ * Fetch elevation data along a polyline defined by lat/lon waypoints.
+ * Interpolates `numPoints` evenly-spaced samples along the line.
+ */
+export async function fetchElevationAlongLine(
+  waypoints: [number, number][], // [lat, lon][]
+  numPoints: number = 150,
+  onProgress?: (pct: number) => void
+): Promise<ProfilePoint[]> {
+  // Compute cumulative distances along the waypoints
+  const segDists: number[] = [0];
+  for (let i = 1; i < waypoints.length; i++) {
+    const d = haversineDistance(waypoints[i - 1][0], waypoints[i - 1][1], waypoints[i][0], waypoints[i][1]);
+    segDists.push(segDists[i - 1] + d);
+  }
+  const totalDist = segDists[segDists.length - 1];
+  if (totalDist === 0) return [];
+
+  // Interpolate evenly spaced points
+  const lons: number[] = [];
+  const lats: number[] = [];
+  const distances: number[] = [];
+
+  for (let i = 0; i < numPoints; i++) {
+    const d = (i / (numPoints - 1)) * totalDist;
+    distances.push(d);
+    // Find the segment
+    let seg = 0;
+    for (let s = 1; s < segDists.length; s++) {
+      if (segDists[s] >= d) { seg = s - 1; break; }
+    }
+    const segLen = segDists[seg + 1] - segDists[seg];
+    const t = segLen > 0 ? (d - segDists[seg]) / segLen : 0;
+    const lat = waypoints[seg][0] + t * (waypoints[seg + 1][0] - waypoints[seg][0]);
+    const lon = waypoints[seg][1] + t * (waypoints[seg + 1][1] - waypoints[seg][1]);
+    lats.push(lat);
+    lons.push(lon);
+  }
+
+  // Fetch elevations in batches
+  const elevations = new Array<number>(numPoints).fill(0);
+  const totalBatches = Math.ceil(numPoints / BATCH_SIZE);
+
+  for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
+    const start = batchIndex * BATCH_SIZE;
+    const end = Math.min(start + BATCH_SIZE, numPoints);
+    const batchElevations = await fetchElevationBatch(lons.slice(start, end), lats.slice(start, end));
+    for (let offset = 0; offset < batchElevations.length; offset++) {
+      elevations[start + offset] = Number(batchElevations[offset] ?? 0);
+    }
+    onProgress?.(Math.min(100, Math.round(((batchIndex + 1) / totalBatches) * 100)));
+  }
+
+  return distances.map((d, i) => ({ distance: d, elevation: elevations[i] }));
+}
+
 export async function fetchElevationGrid(
   bounds: { south: number; north: number; west: number; east: number },
   resolution: number = 50,

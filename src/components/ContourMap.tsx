@@ -12,6 +12,7 @@ interface Props {
   onBoundsSelected: (bounds: { south: number; north: number; west: number; east: number }) => void;
   selectedBounds: { south: number; north: number; west: number; east: number } | null;
   mapRef: React.MutableRefObject<HTMLDivElement | null>;
+  onProfileLineDrawn?: (waypoints: [number, number][]) => void;
 }
 
 export function ContourMap({
