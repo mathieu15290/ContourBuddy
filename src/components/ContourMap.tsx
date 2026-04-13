@@ -142,15 +142,69 @@ export function ContourMap({
     map.on("mousemove", onMouseMove);
     map.on("mouseup", onMouseUp);
 
-    // Button click handler
+    // Profile drawing handlers
+    const onProfileClick = (e: L.LeafletMouseEvent) => {
+      if (!drawingProfileRef.current) return;
+      profilePointsRef.current.push(e.latlng);
+      const marker = L.circleMarker(e.latlng, { radius: 4, color: "#e74c3c", fillColor: "#e74c3c", fillOpacity: 1 }).addTo(map);
+      profileMarkersRef.current.push(marker);
+      if (profilePolylineRef.current) {
+        profilePolylineRef.current.setLatLngs(profilePointsRef.current);
+      } else {
+        profilePolylineRef.current = L.polyline(profilePointsRef.current, { color: "#e74c3c", weight: 3, dashArray: "6,4" }).addTo(map);
+      }
+    };
+
+    const onProfileDblClick = () => {
+      if (!drawingProfileRef.current) return;
+      drawingProfileRef.current = false;
+      setDrawingProfile(false);
+      map.getContainer().style.cursor = "";
+      map.doubleClickZoom.enable();
+      const pts = profilePointsRef.current;
+      if (pts.length >= 2 && onProfileLineDrawn) {
+        onProfileLineDrawn(pts.map((p) => [p.lat, p.lng] as [number, number]));
+      }
+    };
+
+    map.on("click", onProfileClick);
+    map.on("dblclick", onProfileDblClick);
+
+    // Button click handlers
     setTimeout(() => {
       const btn = document.getElementById("draw-rect-btn");
       if (btn) {
         btn.addEventListener("click", (e) => {
           e.preventDefault();
+          // Cancel profile mode if active
+          drawingProfileRef.current = false;
+          setDrawingProfile(false);
           drawingRef.current = !drawingRef.current;
           setDrawing(drawingRef.current);
           map.getContainer().style.cursor = drawingRef.current ? "crosshair" : "";
+          if (drawingRef.current) map.doubleClickZoom.enable();
+        });
+      }
+      const profileBtn = document.getElementById("draw-profile-btn");
+      if (profileBtn) {
+        profileBtn.addEventListener("click", (e) => {
+          e.preventDefault();
+          // Cancel rect mode if active
+          drawingRef.current = false;
+          setDrawing(false);
+          drawingProfileRef.current = !drawingProfileRef.current;
+          setDrawingProfile(drawingProfileRef.current);
+          map.getContainer().style.cursor = drawingProfileRef.current ? "crosshair" : "";
+          if (drawingProfileRef.current) {
+            map.doubleClickZoom.disable();
+            // Clear previous profile line
+            profilePointsRef.current = [];
+            if (profilePolylineRef.current) { map.removeLayer(profilePolylineRef.current); profilePolylineRef.current = null; }
+            profileMarkersRef.current.forEach((m) => map.removeLayer(m));
+            profileMarkersRef.current = [];
+          } else {
+            map.doubleClickZoom.enable();
+          }
         });
       }
     }, 0);
@@ -208,6 +262,11 @@ export function ContourMap({
       {drawing && (
         <div className="absolute top-2 left-1/2 -translate-x-1/2 z-[1000] bg-card text-foreground text-sm px-3 py-1.5 rounded-md shadow-md border border-border">
           Cliquez et glissez pour dessiner un rectangle
+        </div>
+      )}
+      {drawingProfile && (
+        <div className="absolute top-2 left-1/2 -translate-x-1/2 z-[1000] bg-card text-foreground text-sm px-3 py-1.5 rounded-md shadow-md border border-border">
+          Cliquez pour tracer une ligne — double-clic pour terminer
         </div>
       )}
     </>
