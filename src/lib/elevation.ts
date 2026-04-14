@@ -25,10 +25,48 @@ const IGN_ALTI_URL = "https://data.geopf.fr/altimetrie/1.0/calcul/alti/rest/elev
 const BATCH_SIZE = 180;
 const MAX_RETRIES = 4;
 const BASE_RETRY_DELAY_MS = 800;
+const CACHE_MAX_ENTRIES = 500;
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-async function fetchElevationBatch(
+// LRU-style cache keyed by rounded coordinates
+const elevationCache = new Map<string, number>();
+
+function cacheKey(lon: number, lat: number): string {
+  return `${lon.toFixed(6)},${lat.toFixed(6)}`;
+}
+
+function getCachedElevations(lons: number[], lats: number[]): { cached: (number | null)[]; missIndices: number[] } {
+  const cached: (number | null)[] = [];
+  const missIndices: number[] = [];
+  for (let i = 0; i < lons.length; i++) {
+    const key = cacheKey(lons[i], lats[i]);
+    if (elevationCache.has(key)) {
+      cached.push(elevationCache.get(key)!);
+    } else {
+      cached.push(null);
+      missIndices.push(i);
+    }
+  }
+  return { cached, missIndices };
+}
+
+function storeInCache(lons: number[], lats: number[], elevations: number[]) {
+  for (let i = 0; i < lons.length; i++) {
+    const key = cacheKey(lons[i], lats[i]);
+    elevationCache.set(key, elevations[i]);
+  }
+  // Evict oldest entries if cache is too large
+  if (elevationCache.size > CACHE_MAX_ENTRIES) {
+    const excess = elevationCache.size - CACHE_MAX_ENTRIES;
+    const iter = elevationCache.keys();
+    for (let i = 0; i < excess; i++) {
+      elevationCache.delete(iter.next().value!);
+    }
+  }
+}
+
+async function fetchElevationBatchRaw(
   lons: number[],
   lats: number[],
   attempt: number = 0
@@ -47,7 +85,7 @@ async function fetchElevationBatch(
         : BASE_RETRY_DELAY_MS * Math.pow(2, attempt);
 
       await wait(delay);
-      return fetchElevationBatch(lons, lats, attempt + 1);
+      return fetchElevationBatchRaw(lons, lats, attempt + 1);
     }
 
     if (res.status === 429) {
@@ -59,6 +97,37 @@ async function fetchElevationBatch(
 
   const json = await res.json();
   return json.elevations as number[];
+}
+
+async function fetchElevationBatch(lons: number[], lats: number[]): Promise<number[]> {
+  const { cached, missIndices } = getCachedElevations(lons, lats);
+
+  if (missIndices.length === 0) {
+    return cached as number[];
+  }
+
+  // Fetch only missing points
+  const missLons = missIndices.map((i) => lons[i]);
+  const missLats = missIndices.map((i) => lats[i]);
+
+  // Batch the misses
+  const fetched = new Array<number>(missLons.length);
+  const totalBatches = Math.ceil(missLons.length / BATCH_SIZE);
+  for (let b = 0; b < totalBatches; b++) {
+    const s = b * BATCH_SIZE;
+    const e = Math.min(s + BATCH_SIZE, missLons.length);
+    const batch = await fetchElevationBatchRaw(missLons.slice(s, e), missLats.slice(s, e));
+    for (let j = 0; j < batch.length; j++) fetched[s + j] = batch[j];
+  }
+
+  storeInCache(missLons, missLats, fetched);
+
+  // Merge back
+  const result = [...cached] as number[];
+  for (let i = 0; i < missIndices.length; i++) {
+    result[missIndices[i]] = fetched[i];
+  }
+  return result;
 }
 
 /**
@@ -120,19 +189,9 @@ export async function fetchElevationAlongLine(
     lons.push(lon);
   }
 
-  // Fetch elevations in batches
-  const elevations = new Array<number>(numPoints).fill(0);
-  const totalBatches = Math.ceil(numPoints / BATCH_SIZE);
-
-  for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
-    const start = batchIndex * BATCH_SIZE;
-    const end = Math.min(start + BATCH_SIZE, numPoints);
-    const batchElevations = await fetchElevationBatch(lons.slice(start, end), lats.slice(start, end));
-    for (let offset = 0; offset < batchElevations.length; offset++) {
-      elevations[start + offset] = Number(batchElevations[offset] ?? 0);
-    }
-    onProgress?.(Math.min(100, Math.round(((batchIndex + 1) / totalBatches) * 100)));
-  }
+  // Fetch elevations (with cache)
+  const elevations = await fetchElevationBatch(lons, lats);
+  onProgress?.(100);
 
   return distances.map((d, i) => ({ distance: d, elevation: elevations[i], lat: lats[i], lon: lons[i] }));
 }
@@ -157,22 +216,9 @@ export async function fetchElevationGrid(
     }
   }
 
-  const elevations = new Array<number>(allLons.length).fill(0);
-  const totalBatches = Math.ceil(allLons.length / BATCH_SIZE);
-
-  for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
-    const start = batchIndex * BATCH_SIZE;
-    const end = Math.min(start + BATCH_SIZE, allLons.length);
-    const batchLons = allLons.slice(start, end);
-    const batchLats = allLats.slice(start, end);
-    const batchElevations = await fetchElevationBatch(batchLons, batchLats);
-
-    for (let offset = 0; offset < batchElevations.length; offset++) {
-      elevations[start + offset] = Number(batchElevations[offset] ?? 0);
-    }
-
-    onProgress?.(Math.min(100, Math.round(((batchIndex + 1) / totalBatches) * 100)));
-  }
+  // Fetch elevations (with cache)
+  const elevations = await fetchElevationBatch(allLons, allLats);
+  onProgress?.(100);
 
   const data: number[][] = [];
   let minElev = Infinity;
