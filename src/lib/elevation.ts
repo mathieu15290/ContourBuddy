@@ -25,7 +25,7 @@ const IGN_ALTI_URL = "https://data.geopf.fr/altimetrie/1.0/calcul/alti/rest/elev
 const BATCH_SIZE = 180;
 const MAX_RETRIES = 4;
 const BASE_RETRY_DELAY_MS = 800;
-const CACHE_MAX_ENTRIES = 500;
+const CACHE_MAX_ENTRIES = 20000;
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
