@@ -189,19 +189,9 @@ export async function fetchElevationAlongLine(
     lons.push(lon);
   }
 
-  // Fetch elevations in batches
-  const elevations = new Array<number>(numPoints).fill(0);
-  const totalBatches = Math.ceil(numPoints / BATCH_SIZE);
-
-  for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
-    const start = batchIndex * BATCH_SIZE;
-    const end = Math.min(start + BATCH_SIZE, numPoints);
-    const batchElevations = await fetchElevationBatch(lons.slice(start, end), lats.slice(start, end));
-    for (let offset = 0; offset < batchElevations.length; offset++) {
-      elevations[start + offset] = Number(batchElevations[offset] ?? 0);
-    }
-    onProgress?.(Math.min(100, Math.round(((batchIndex + 1) / totalBatches) * 100)));
-  }
+  // Fetch elevations (with cache)
+  const elevations = await fetchElevationBatch(lons, lats);
+  onProgress?.(100);
 
   return distances.map((d, i) => ({ distance: d, elevation: elevations[i], lat: lats[i], lon: lons[i] }));
 }
@@ -226,22 +216,9 @@ export async function fetchElevationGrid(
     }
   }
 
-  const elevations = new Array<number>(allLons.length).fill(0);
-  const totalBatches = Math.ceil(allLons.length / BATCH_SIZE);
-
-  for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
-    const start = batchIndex * BATCH_SIZE;
-    const end = Math.min(start + BATCH_SIZE, allLons.length);
-    const batchLons = allLons.slice(start, end);
-    const batchLats = allLats.slice(start, end);
-    const batchElevations = await fetchElevationBatch(batchLons, batchLats);
-
-    for (let offset = 0; offset < batchElevations.length; offset++) {
-      elevations[start + offset] = Number(batchElevations[offset] ?? 0);
-    }
-
-    onProgress?.(Math.min(100, Math.round(((batchIndex + 1) / totalBatches) * 100)));
-  }
+  // Fetch elevations (with cache)
+  const elevations = await fetchElevationBatch(allLons, allLats);
+  onProgress?.(100);
 
   const data: number[][] = [];
   let minElev = Infinity;
