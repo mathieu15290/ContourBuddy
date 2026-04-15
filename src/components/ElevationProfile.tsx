@@ -59,51 +59,74 @@ export function ElevationProfile({ data, onClose, onHoverPoint }: Props) {
 
   const formatDist = (d: number) => (d >= 1000 ? `${(d / 1000).toFixed(1)} km` : `${Math.round(d)} m`);
 
-  const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
+  const getClosestPoint = (clientX: number): ProfilePoint | null => {
     const svg = svgRef.current;
-    if (!svg) return;
+    if (!svg) return null;
     const rect = svg.getBoundingClientRect();
     const scaleX = width / rect.width;
-    const mouseX = (e.clientX - rect.left) * scaleX;
+    const mouseX = (clientX - rect.left) * scaleX;
     const dist = ((mouseX - PADDING.left) / plotW) * stats.totalDist;
-    if (dist < 0 || dist > stats.totalDist) { setHover(null); return; }
+    if (dist < 0 || dist > stats.totalDist) return null;
     let closest = data[0];
     let minDiff = Infinity;
     for (const p of data) {
       const diff = Math.abs(p.distance - dist);
       if (diff < minDiff) { minDiff = diff; closest = p; }
     }
+    return closest;
+  };
+
+  const handleInteraction = (clientX: number) => {
+    const svg = svgRef.current;
+    if (!svg) return;
+    const rect = svg.getBoundingClientRect();
+    const scaleX = width / rect.width;
+    const mouseX = (clientX - rect.left) * scaleX;
+    const closest = getClosestPoint(clientX);
+    if (!closest) { setHover(null); onHoverPoint?.(null); return; }
     setHover({ x: mouseX, point: closest });
     onHoverPoint?.(closest);
   };
+
+  const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => handleInteraction(e.clientX);
+  
+  const handleTouchMove = (e: React.TouchEvent<SVGSVGElement>) => {
+    if (e.touches.length === 1) {
+      e.preventDefault();
+      handleInteraction(e.touches[0].clientX);
+    }
+  };
+
+  const clearHover = () => { setHover(null); onHoverPoint?.(null); };
 
   const yTicks = 5;
   const xTicks = 5;
 
   return (
-    <div className="absolute bottom-0 left-0 right-0 z-[1000] bg-card border-t border-border shadow-lg">
-      <div className="flex items-center justify-between px-4 py-2 border-b border-border">
-        <div className="flex items-center gap-4 text-xs text-muted-foreground">
-          <span className="font-medium text-foreground text-sm">Profil altimétrique</span>
-          <span>Distance : {formatDist(stats.totalDist)}</span>
-          <span>D+ : {Math.round(stats.gain)}m</span>
-          <span>D- : {Math.round(stats.loss)}m</span>
-          <span>Min : {Math.round(stats.min)}m</span>
-          <span>Max : {Math.round(stats.max)}m</span>
+    <div className="absolute bottom-0 left-0 right-0 z-[1000] bg-card border-t border-border shadow-lg max-h-[45vh]">
+      <div className="flex items-center justify-between px-3 sm:px-4 py-2 border-b border-border">
+        <div className="flex items-center gap-2 sm:gap-4 text-[10px] sm:text-xs text-muted-foreground flex-wrap min-w-0">
+          <span className="font-medium text-foreground text-xs sm:text-sm shrink-0">Profil</span>
+          <span>{formatDist(stats.totalDist)}</span>
+          <span>D+ {Math.round(stats.gain)}m</span>
+          <span>D- {Math.round(stats.loss)}m</span>
+          <span className="hidden sm:inline">Min {Math.round(stats.min)}m</span>
+          <span className="hidden sm:inline">Max {Math.round(stats.max)}m</span>
         </div>
-        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose}>
+        <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={onClose}>
           <X className="h-4 w-4" />
         </Button>
       </div>
       <svg
         ref={svgRef}
         viewBox={`0 0 ${width} ${height}`}
-        className="w-full"
-        style={{ height: "180px" }}
+        className="w-full touch-none"
+        style={{ height: "clamp(120px, 20vh, 180px)" }}
         onMouseMove={handleMouseMove}
-        onMouseLeave={() => { setHover(null); onHoverPoint?.(null); }}
+        onMouseLeave={clearHover}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={clearHover}
       >
-        {/* Grid lines */}
         {Array.from({ length: yTicks + 1 }, (_, i) => {
           const val = yMin + (i / yTicks) * (yMax - yMin);
           const y = toY(val);
@@ -122,12 +145,9 @@ export function ElevationProfile({ data, onClose, onHoverPoint }: Props) {
           );
         })}
 
-        {/* Area fill */}
         <path d={areaD} fill="hsl(var(--primary) / 0.15)" />
-        {/* Line */}
         <path d={pathD} fill="none" stroke="hsl(var(--primary))" strokeWidth={2} />
 
-        {/* Hover */}
         {hover && (
           <>
             <line x1={hover.x} x2={hover.x} y1={PADDING.top} y2={PADDING.top + plotH} stroke="hsl(var(--primary))" strokeWidth={1} strokeDasharray="4,2" />

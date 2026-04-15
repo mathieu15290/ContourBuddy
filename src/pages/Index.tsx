@@ -7,6 +7,7 @@ import { fetchElevationGrid, fetchElevationAlongLine } from "@/lib/elevation";
 import { generateContours, type ContourResult } from "@/lib/contours";
 import { exportGeoJSON, exportDXF, exportKML, exportPNG } from "@/lib/export-utils";
 import { useToast } from "@/hooks/use-toast";
+import { ChevronUp, ChevronDown } from "lucide-react";
 import logo from "@/assets/logo.png";
 
 type Bounds = { south: number; north: number; west: number; east: number };
@@ -24,6 +25,7 @@ const Index = () => {
   const [profileData, setProfileData] = useState<ProfilePoint[] | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
   const [hoveredProfilePoint, setHoveredProfilePoint] = useState<ProfilePoint | null>(null);
+  const [mobilePanel, setMobilePanel] = useState(false);
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const { toast } = useToast();
 
@@ -35,6 +37,8 @@ const Index = () => {
   const handleBoundsSelected = useCallback((b: Bounds) => {
     setBounds(b);
     setContours(null);
+    // Auto-open panel on mobile when bounds selected
+    setMobilePanel(true);
   }, []);
 
   const calculateArea = (b: Bounds): number => {
@@ -49,32 +53,23 @@ const Index = () => {
 
   const handleGenerate = useCallback(async () => {
     if (!bounds) return;
-
     setLoading(true);
     setProgress(0);
     setContours(null);
-
     try {
-      // Keep finer detail for small intervals without overloading the IGN API
       const resolution = interval <= 1 ? 120 : interval <= 5 ? 90 : interval <= 10 ? 70 : 50;
       const grid = await fetchElevationGrid(bounds, resolution, (pct) => setProgress(pct));
       setMinElev(grid.minElev);
       setMaxElev(grid.maxElev);
-
       const majorEvery = interval <= 5 ? 5 : 4;
       const result = generateContours(grid, interval, majorEvery);
       setContours(result);
-
       toast({
         title: "Courbes générées",
-        description: `${result.lines.length} courbes de niveaux créées (${Math.round(grid.minElev)}m – ${Math.round(grid.maxElev)}m)`,
+        description: `${result.lines.length} courbes créées (${Math.round(grid.minElev)}m – ${Math.round(grid.maxElev)}m)`,
       });
     } catch (err: any) {
-      toast({
-        title: "Erreur",
-        description: err.message || "Erreur lors de la génération",
-        variant: "destructive",
-      });
+      toast({ title: "Erreur", description: err.message || "Erreur lors de la génération", variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -82,11 +77,8 @@ const Index = () => {
 
   const handleExportPNG = useCallback(async () => {
     if (!mapContainerRef.current) return;
-    try {
-      await exportPNG(mapContainerRef.current);
-    } catch {
-      toast({ title: "Erreur", description: "Export PNG échoué", variant: "destructive" });
-    }
+    try { await exportPNG(mapContainerRef.current); }
+    catch { toast({ title: "Erreur", description: "Export PNG échoué", variant: "destructive" }); }
   }, [toast]);
 
   const handleProfileLineDrawn = useCallback(async (waypoints: [number, number][]) => {
@@ -102,45 +94,46 @@ const Index = () => {
     }
   }, [toast]);
 
+  const controlPanelProps = {
+    interval,
+    onIntervalChange: setInterval,
+    hasBounds: !!bounds,
+    loading,
+    progress,
+    onGenerate: handleGenerate,
+    contours,
+    minElev,
+    maxElev,
+    area: bounds ? calculateArea(bounds) : 0,
+    onExportGeoJSON: () => contours && exportGeoJSON(contours),
+    onExportDXF: () => contours && exportDXF(contours),
+    onExportKML: () => contours && exportKML(contours),
+    onExportPNG: handleExportPNG,
+  };
+
   return (
     <div className="flex flex-col h-screen bg-background">
       {/* Header */}
-      <header className="border-b border-border bg-card px-4 py-3 flex items-center gap-3 shrink-0">
-        <div className="flex items-center gap-2">
-          <img src={logo} alt="Logo" className="h-8 w-8" />
-          <h1 className="text-lg font-bold text-foreground tracking-tight">
+      <header className="border-b border-border bg-card px-3 sm:px-4 py-2 sm:py-3 flex items-center gap-2 sm:gap-3 shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
+          <img src={logo} alt="Logo" className="h-7 w-7 sm:h-8 sm:w-8" />
+          <h1 className="text-base sm:text-lg font-bold text-foreground tracking-tight">
             ContourBuddy
           </h1>
         </div>
-        <div className="flex-1 max-w-lg ml-4">
+        <div className="flex-1 max-w-lg ml-2 sm:ml-4">
           <AddressSearch onSelect={handleAddressSelect} />
         </div>
-        <p className="hidden md:block text-xs text-muted-foreground ml-auto">
+        <p className="hidden lg:block text-xs text-muted-foreground ml-auto">
           Données d'élévation © IGN – RGE ALTI®
         </p>
       </header>
 
       {/* Main */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar */}
+      <div className="flex flex-1 overflow-hidden relative">
+        {/* Desktop Sidebar */}
         <aside className="w-80 border-r border-border bg-card overflow-y-auto p-4 shrink-0 hidden md:block">
-          <ControlPanel
-            interval={interval}
-            onIntervalChange={setInterval}
-            hasBounds={!!bounds}
-            loading={loading}
-            progress={progress}
-            onGenerate={handleGenerate}
-            contours={contours}
-            minElev={minElev}
-            maxElev={maxElev}
-            area={bounds ? calculateArea(bounds) : 0}
-            onExportGeoJSON={() => contours && exportGeoJSON(contours)}
-            onExportDXF={() => contours && exportDXF(contours)}
-            onExportKML={() => contours && exportKML(contours)}
-            onExportPNG={handleExportPNG}
-          />
-
+          <ControlPanel {...controlPanelProps} />
           {!bounds && !contours && (
             <div className="mt-6 text-center text-sm text-muted-foreground px-2">
               <p className="mb-2">👆 Utilisez l'outil rectangle sur la carte pour sélectionner une zone</p>
@@ -166,7 +159,7 @@ const Index = () => {
 
           {profileLoading && (
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-[1000] bg-card text-foreground text-sm px-4 py-2 rounded-md shadow-md border border-border">
-              Chargement du profil altimétrique...
+              Chargement du profil...
             </div>
           )}
 
@@ -174,24 +167,21 @@ const Index = () => {
             <ElevationProfile data={profileData} onClose={() => setProfileData(null)} onHoverPoint={setHoveredProfilePoint} />
           )}
 
-          {/* Mobile controls */}
-          <div className="md:hidden absolute bottom-4 left-4 right-4 z-[1000]">
-            <ControlPanel
-              interval={interval}
-              onIntervalChange={setInterval}
-              hasBounds={!!bounds}
-              loading={loading}
-              progress={progress}
-              onGenerate={handleGenerate}
-              contours={contours}
-              minElev={minElev}
-              maxElev={maxElev}
-              area={bounds ? calculateArea(bounds) : 0}
-              onExportGeoJSON={() => contours && exportGeoJSON(contours)}
-              onExportDXF={() => contours && exportDXF(contours)}
-              onExportKML={() => contours && exportKML(contours)}
-              onExportPNG={handleExportPNG}
-            />
+          {/* Mobile bottom sheet toggle */}
+          <div className="md:hidden absolute bottom-3 left-3 right-3 z-[1000] flex flex-col gap-2">
+            {mobilePanel && (
+              <div className="bg-card border border-border rounded-xl shadow-lg p-3 max-h-[60vh] overflow-y-auto">
+                <ControlPanel {...controlPanelProps} />
+              </div>
+            )}
+            <button
+              onClick={() => setMobilePanel((v) => !v)}
+              className="self-center flex items-center gap-1.5 bg-primary text-primary-foreground px-4 py-2 rounded-full shadow-lg text-sm font-medium"
+            >
+              <img src={logo} alt="" className="h-4 w-4" />
+              {mobilePanel ? "Fermer" : bounds ? "Paramètres" : "Sélectionnez une zone"}
+              {mobilePanel ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+            </button>
           </div>
         </main>
       </div>
