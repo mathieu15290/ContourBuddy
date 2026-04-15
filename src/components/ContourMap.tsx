@@ -58,7 +58,7 @@ export function ContourMap({
       center,
       zoom,
       zoomControl: true,
-      tap: true,
+      
     });
 
     const planLayer = L.tileLayer(
