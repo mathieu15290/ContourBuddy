@@ -29,6 +29,7 @@ const Index = () => {
   const [mobilePanel, setMobilePanel] = useState(false);
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const { toast } = useToast();
+  const { dark, toggle: toggleTheme } = useTheme();
 
   const handleAddressSelect = useCallback((lon: number, lat: number, label: string) => {
     setCenter([lat, lon]);
