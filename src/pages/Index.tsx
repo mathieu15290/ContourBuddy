@@ -7,7 +7,8 @@ import { fetchElevationGrid, fetchElevationAlongLine } from "@/lib/elevation";
 import { generateContours, type ContourResult } from "@/lib/contours";
 import { exportGeoJSON, exportDXF, exportKML, exportPNG } from "@/lib/export-utils";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronUp, ChevronDown } from "lucide-react";
+import { useTheme } from "@/hooks/use-theme";
+import { ChevronUp, ChevronDown, Moon, Sun } from "lucide-react";
 import logo from "@/assets/logo.png";
 
 type Bounds = { south: number; north: number; west: number; east: number };
