@@ -7,7 +7,8 @@ import { fetchElevationGrid, fetchElevationAlongLine } from "@/lib/elevation";
 import { generateContours, type ContourResult } from "@/lib/contours";
 import { exportGeoJSON, exportDXF, exportKML, exportPNG } from "@/lib/export-utils";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronUp, ChevronDown } from "lucide-react";
+import { useTheme } from "@/hooks/use-theme";
+import { ChevronUp, ChevronDown, Moon, Sun } from "lucide-react";
 import logo from "@/assets/logo.png";
 
 type Bounds = { south: number; north: number; west: number; east: number };
@@ -28,6 +29,7 @@ const Index = () => {
   const [mobilePanel, setMobilePanel] = useState(false);
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const { toast } = useToast();
+  const { dark, toggle: toggleTheme } = useTheme();
 
   const handleAddressSelect = useCallback((lon: number, lat: number, label: string) => {
     setCenter([lat, lon]);
@@ -124,9 +126,14 @@ const Index = () => {
         <div className="flex-1 max-w-lg ml-2 sm:ml-4">
           <AddressSearch onSelect={handleAddressSelect} />
         </div>
-        <p className="hidden lg:block text-xs text-muted-foreground ml-auto">
-          Données d'élévation © IGN – RGE ALTI®
-        </p>
+        <div className="hidden lg:flex items-center gap-3 ml-auto">
+          <p className="text-xs text-muted-foreground">
+            Données d'élévation © IGN – RGE ALTI®
+          </p>
+          <button onClick={toggleTheme} className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground">
+            {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          </button>
+        </div>
       </header>
 
       {/* Main */}
