@@ -126,9 +126,14 @@ const Index = () => {
         <div className="flex-1 max-w-lg ml-2 sm:ml-4">
           <AddressSearch onSelect={handleAddressSelect} />
         </div>
-        <p className="hidden lg:block text-xs text-muted-foreground ml-auto">
-          Données d'élévation © IGN – RGE ALTI®
-        </p>
+        <div className="hidden lg:flex items-center gap-3 ml-auto">
+          <p className="text-xs text-muted-foreground">
+            Données d'élévation © IGN – RGE ALTI®
+          </p>
+          <button onClick={toggleTheme} className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground">
+            {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          </button>
+        </div>
       </header>
 
       {/* Main */}
