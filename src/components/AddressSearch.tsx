@@ -70,7 +70,7 @@ export function AddressSearch({ onSelect }: Props) {
       </div>
 
       {open && results.length > 0 && (
-        <div className="absolute z-50 mt-1 w-full rounded-md border border-border bg-popover shadow-lg">
+        <div className="absolute z-[2000] mt-1 w-full rounded-md border border-border bg-popover shadow-lg max-h-[60vh] overflow-y-auto">
           {results.map((r, i) => (
             <button
               key={i}
