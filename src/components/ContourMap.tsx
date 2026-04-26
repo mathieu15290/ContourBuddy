@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback, useState } from "react";
 import L from "leaflet";
 import type { ContourResult } from "@/lib/contours";
 import { getContourColor } from "@/lib/contours";
+import type { LayerState, LayerId } from "@/lib/layers";
 
 interface HighlightPoint {
   lat: number;
@@ -21,6 +22,8 @@ interface Props {
   mapRef: React.MutableRefObject<HTMLDivElement | null>;
   onProfileLineDrawn?: (waypoints: [number, number][]) => void;
   highlightPoint?: HighlightPoint | null;
+  importedTrack?: { points: [number, number][]; name?: string } | null;
+  layers: LayerState[];
 }
 
 export function ContourMap({
@@ -34,9 +37,12 @@ export function ContourMap({
   mapRef,
   onProfileLineDrawn,
   highlightPoint,
+  importedTrack,
+  layers = [],
 }: Props) {
   const leafletMapRef = useRef<L.Map | null>(null);
   const contourLayerRef = useRef<L.LayerGroup | null>(null);
+  const baseLayersRef = useRef<Partial<Record<LayerId, L.TileLayer>>>({});
   const rectRef = useRef<L.Rectangle | null>(null);
   const [drawing, setDrawing] = useState(false);
   const drawingRef = useRef(false);
@@ -76,13 +82,12 @@ export function ContourMap({
       { maxZoom: 19, attribution: "© IGN", opacity: 0.7 }
     );
 
+    // Stack all base layers — visibility/opacity managed via the LayersPanel.
+    // Z-order matches the panel: plan (bottom) → satellite → cadastre (top).
     planLayer.addTo(map);
-
-    L.control.layers({
-      "Plan IGN": planLayer,
-      "Satellite": satelliteLayer,
-      "Cadastre": cadastreLayer,
-    }).addTo(map);
+    satelliteLayer.addTo(map);
+    cadastreLayer.addTo(map);
+    baseLayersRef.current = { plan: planLayer, satellite: satelliteLayer, cadastre: cadastreLayer };
 
     // Custom draw buttons — larger touch targets on mobile
     const DrawControl = L.Control.extend({
@@ -348,6 +353,38 @@ export function ContourMap({
     }
   }, [highlightPoint]);
 
+  // Render imported GPX/KML track
+  const importedTrackLayerRef = useRef<L.LayerGroup | null>(null);
+  useEffect(() => {
+    const map = leafletMapRef.current;
+    if (!map) return;
+    if (importedTrackLayerRef.current) {
+      map.removeLayer(importedTrackLayerRef.current);
+      importedTrackLayerRef.current = null;
+    }
+    if (!importedTrack || importedTrack.points.length < 2) return;
+
+    const group = L.layerGroup().addTo(map);
+    const latLngs = importedTrack.points as [number, number][];
+    const polyline = L.polyline(latLngs, {
+      color: "#2563eb",
+      weight: 4,
+      opacity: 0.9,
+    }).addTo(group);
+    if (importedTrack.name) {
+      polyline.bindTooltip(importedTrack.name, { sticky: true });
+    }
+    L.circleMarker(latLngs[0], { radius: 6, color: "#16a34a", fillColor: "#16a34a", fillOpacity: 1 })
+      .bindTooltip("Départ", { direction: "top" })
+      .addTo(group);
+    L.circleMarker(latLngs[latLngs.length - 1], { radius: 6, color: "#dc2626", fillColor: "#dc2626", fillOpacity: 1 })
+      .bindTooltip("Arrivée", { direction: "top" })
+      .addTo(group);
+
+    importedTrackLayerRef.current = group;
+    map.fitBounds(polyline.getBounds(), { padding: [40, 40] });
+  }, [importedTrack]);
+
   // Update center/zoom
   useEffect(() => {
     if (leafletMapRef.current) {
@@ -362,6 +399,11 @@ export function ContourMap({
     layer.clearLayers();
     if (!contours) return;
 
+    const contoursState = layers.find((l) => l.id === "contours");
+    const labelsState = layers.find((l) => l.id === "labels");
+    const showLabels = labelsState?.visible !== false;
+    const baseOpacity = contoursState?.opacity ?? 1;
+
     for (const line of contours.lines) {
       if (line.coordinates.length < 2) continue;
       const latLngs = line.coordinates.map(
@@ -371,9 +413,9 @@ export function ContourMap({
       const polyline = L.polyline(latLngs, {
         color,
         weight: line.isMajor ? 3 : 1,
-        opacity: line.isMajor ? 0.9 : 0.6,
+        opacity: (line.isMajor ? 0.9 : 0.6) * baseOpacity,
       });
-      if (line.isMajor) {
+      if (line.isMajor && showLabels) {
         polyline.bindTooltip(`${line.elevation}m`, {
           permanent: true,
           direction: "center",
@@ -382,7 +424,54 @@ export function ContourMap({
       }
       polyline.addTo(layer);
     }
-  }, [contours, minElev, maxElev]);
+  }, [contours, minElev, maxElev, layers]);
+
+  // Apply layer visibility & opacity to base IGN layers and overlays
+  useEffect(() => {
+    const map = leafletMapRef.current;
+    if (!map) return;
+
+    // Base IGN layers
+    (["plan", "satellite", "cadastre"] as const).forEach((id) => {
+      const tile = baseLayersRef.current[id];
+      if (!tile) return;
+      const state = layers.find((l) => l.id === id);
+      if (!state) return;
+      if (state.visible) {
+        if (!map.hasLayer(tile)) tile.addTo(map);
+        tile.setOpacity(state.opacity);
+      } else if (map.hasLayer(tile)) {
+        map.removeLayer(tile);
+      }
+    });
+
+    // Contours layer group visibility (opacity is baked into polylines above)
+    const contourState = layers.find((l) => l.id === "contours");
+    const cg = contourLayerRef.current;
+    if (cg) {
+      if (contourState?.visible) {
+        if (!map.hasLayer(cg)) cg.addTo(map);
+      } else if (map.hasLayer(cg)) {
+        map.removeLayer(cg);
+      }
+    }
+
+    // Imported track layer
+    const trackState = layers.find((l) => l.id === "track");
+    const tg = importedTrackLayerRef.current;
+    if (tg) {
+      if (trackState?.visible) {
+        if (!map.hasLayer(tg)) tg.addTo(map);
+        tg.eachLayer((lyr) => {
+          if ((lyr as L.Path).setStyle) {
+            (lyr as L.Path).setStyle({ opacity: trackState.opacity, fillOpacity: trackState.opacity });
+          }
+        });
+      } else if (map.hasLayer(tg)) {
+        map.removeLayer(tg);
+      }
+    }
+  }, [layers, contours, importedTrack]);
 
   return (
     <>
