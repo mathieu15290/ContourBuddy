@@ -1,4 +1,4 @@
-ContourBuddy
+ContourBuddyApp
 A web application that generates contour lines from a location using public elevation data from the French National Geographic Institute (IGN).
 
 License
