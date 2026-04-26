@@ -160,7 +160,7 @@ const Index = () => {
         <div className="flex items-center gap-2 shrink-0">
           <img src={logo} alt="Logo" className="h-7 w-7 sm:h-8 sm:w-8" />
           <h1 className="text-base sm:text-lg font-bold text-foreground tracking-tight">
-            ContourBuddy
+            ContourBuddyApp
           </h1>
         </div>
         <div className="flex-1 max-w-lg ml-2 sm:ml-4">
