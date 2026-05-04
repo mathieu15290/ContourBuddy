@@ -48,6 +48,8 @@ export function ContourMap({
   const drawingRef = useRef(false);
   const startLatLngRef = useRef<L.LatLng | null>(null);
   const tempRectRef = useRef<L.Rectangle | null>(null);
+  const [selectionOffscreen, setSelectionOffscreen] = useState(false);
+  const [selectionInfo, setSelectionInfo] = useState<{ widthM: number; heightM: number } | null>(null);
 
   // Profile drawing state
   const [drawingProfile, setDrawingProfile] = useState(false);
