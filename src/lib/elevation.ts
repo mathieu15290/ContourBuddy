@@ -213,3 +213,30 @@ export async function fetchElevationGrid(
     maxElev,
   };
 }
+
+export function smoothElevationGrid(grid: ElevationGrid, passes: number = 1): ElevationGrid {
+  const { width, height } = grid;
+  let src = grid.data.map((row) => row.slice());
+  const dst = grid.data.map((row) => row.slice());
+  for (let p = 0; p < passes; p++) {
+    for (let r = 0; r < height; r++) {
+      for (let c = 0; c < width; c++) {
+        const r0 = Math.max(0, r - 1), r2 = Math.min(height - 1, r + 1);
+        const c0 = Math.max(0, c - 1), c2 = Math.min(width - 1, c + 1);
+        const v =
+          src[r0][c0] * 1 + src[r0][c] * 2 + src[r0][c2] * 1 +
+          src[r][c0]  * 2 + src[r][c]  * 4 + src[r][c2]  * 2 +
+          src[r2][c0] * 1 + src[r2][c] * 2 + src[r2][c2] * 1;
+        dst[r][c] = v / 16;
+      }
+    }
+    src = dst.map((row) => row.slice());
+  }
+  let minElev = Infinity, maxElev = -Infinity;
+  for (let r = 0; r < height; r++) for (let c = 0; c < width; c++) {
+    const v = dst[r][c];
+    if (v < minElev) minElev = v;
+    if (v > maxElev) maxElev = v;
+  }
+  return { ...grid, data: dst, minElev, maxElev };
+}
