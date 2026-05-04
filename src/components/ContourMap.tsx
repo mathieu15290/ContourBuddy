@@ -107,6 +107,9 @@ export function ContourMap({
     contourLayerRef.current = L.layerGroup().addTo(map);
     leafletMapRef.current = map;
 
+    // Cartographic scale (bottom-left)
+    L.control.scale({ position: "bottomleft", metric: true, imperial: false, maxWidth: 150 }).addTo(map);
+
     // === RECTANGLE DRAWING (mouse + touch) ===
     const getLatLngFromTouch = (touch: Touch): L.LatLng => {
       const containerPoint = map.mouseEventToContainerPoint({
