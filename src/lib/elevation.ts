@@ -144,6 +144,15 @@ export async function fetchElevationGrid(
 ): Promise<ElevationGrid> {
   const { south, north, west, east } = bounds;
 
+  // Limit resolution so the grid step stays >= ~5 m (RGE ALTI native ~1-5 m).
+  const midLat = (south + north) / 2;
+  const widthM = (east - west) * 111320 * Math.cos((midLat * Math.PI) / 180);
+  const heightM = (north - south) * 111320;
+  const minSideM = Math.max(1, Math.min(widthM, heightM));
+  const MIN_STEP_M = 5;
+  const maxRes = Math.max(20, Math.floor(minSideM / MIN_STEP_M) + 1);
+  if (resolution > maxRes) resolution = maxRes;
+
   const latStep = (north - south) / (resolution - 1);
   const lonStep = (east - west) / (resolution - 1);
 
