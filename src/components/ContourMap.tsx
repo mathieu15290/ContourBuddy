@@ -552,6 +552,19 @@ export function ContourMap({
           Touchez pour tracer — appui long pour terminer
         </div>
       )}
+      {selectionInfo && (
+        <div className="absolute bottom-2 right-2 z-[1000] bg-card text-foreground text-xs px-2.5 py-1.5 rounded-md shadow-md border border-border">
+          Zone : {formatMeters(selectionInfo.widthM)} × {formatMeters(selectionInfo.heightM)}
+        </div>
+      )}
+      {selectionOffscreen && selectedBounds && (
+        <button
+          onClick={recenterOnSelection}
+          className="absolute bottom-12 right-2 z-[1000] bg-card text-foreground text-xs px-3 py-1.5 rounded-md shadow-md border border-border hover:bg-accent hover:text-accent-foreground transition-colors"
+        >
+          Recadrer sur la zone
+        </button>
+      )}
     </>
   );
 }
