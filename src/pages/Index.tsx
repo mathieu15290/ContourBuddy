@@ -3,7 +3,7 @@ import { AddressSearch } from "@/components/AddressSearch";
 import { ContourMap } from "@/components/ContourMap";
 import { ControlPanel } from "@/components/ControlPanel";
 import { ElevationProfile, type ProfilePoint } from "@/components/ElevationProfile";
-import { fetchElevationGrid, fetchElevationAlongLine, type ElevationGrid } from "@/lib/elevation";
+import { fetchElevationGrid, fetchElevationAlongLine, smoothElevationGrid, type ElevationGrid } from "@/lib/elevation";
 import { generateContours, type ContourResult } from "@/lib/contours";
 import { exportGeoJSON, exportDXF, exportKML, exportPNG } from "@/lib/export-utils";
 import { parseTrackFile, trackBounds, type TrackPoint } from "@/lib/track-import";
@@ -68,7 +68,8 @@ const Index = () => {
     setContours(null);
     try {
       const resolution = interval <= 1 ? 120 : interval <= 5 ? 90 : interval <= 10 ? 70 : 50;
-      const g = await fetchElevationGrid(bounds, resolution, (pct) => setProgress(pct));
+      const rawGrid = await fetchElevationGrid(bounds, resolution, (pct) => setProgress(pct));
+      const g = smoothElevationGrid(rawGrid, interval <= 5 ? 1 : 2);
       setGrid(g);
       setMinElev(g.minElev);
       setMaxElev(g.maxElev);
