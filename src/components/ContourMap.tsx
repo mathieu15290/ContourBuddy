@@ -163,6 +163,9 @@ export function ContourMap({
         west: bounds.getWest(),
         east: bounds.getEast(),
       });
+
+      // Auto-fit view to selection
+      map.fitBounds(bounds, { padding: [40, 40], maxZoom: 17 });
     };
 
     // Touch handlers for rectangle
