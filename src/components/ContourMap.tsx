@@ -481,6 +481,60 @@ export function ContourMap({
     }
   }, [layers, contours, importedTrack]);
 
+  // Selection ↔ viewport coherence watchdog
+  useEffect(() => {
+    const map = leafletMapRef.current;
+    if (!map) return;
+
+    const evaluate = () => {
+      if (!selectedBounds) {
+        setSelectionOffscreen(false);
+        setSelectionInfo(null);
+        return;
+      }
+      const { south, north, west, east } = selectedBounds;
+      const sw = L.latLng(south, west);
+      const nw = L.latLng(north, west);
+      const se = L.latLng(south, east);
+      const widthM = sw.distanceTo(se);
+      const heightM = sw.distanceTo(nw);
+      setSelectionInfo({ widthM, heightM });
+
+      const selBounds = L.latLngBounds(sw, L.latLng(north, east));
+      const viewBounds = map.getBounds();
+      const intersects = viewBounds.intersects(selBounds);
+
+      const pSW = map.latLngToContainerPoint(sw);
+      const pSE = map.latLngToContainerPoint(se);
+      const projectedWidthPx = Math.abs(pSE.x - pSW.x);
+      const viewportWidthPx = map.getSize().x;
+
+      const tooSmall = projectedWidthPx < viewportWidthPx * 0.05;
+      setSelectionOffscreen(!intersects || tooSmall);
+    };
+
+    evaluate();
+    map.on("moveend", evaluate);
+    map.on("zoomend", evaluate);
+    return () => {
+      map.off("moveend", evaluate);
+      map.off("zoomend", evaluate);
+    };
+  }, [selectedBounds]);
+
+  const formatMeters = (m: number) =>
+    m < 1000 ? `${Math.round(m)} m` : `${(m / 1000).toFixed(2)} km`;
+
+  const recenterOnSelection = () => {
+    const map = leafletMapRef.current;
+    if (!map || !selectedBounds) return;
+    const { south, north, west, east } = selectedBounds;
+    map.fitBounds(L.latLngBounds(L.latLng(south, west), L.latLng(north, east)), {
+      padding: [40, 40],
+      maxZoom: 17,
+    });
+  };
+
   return (
     <>
       <div
