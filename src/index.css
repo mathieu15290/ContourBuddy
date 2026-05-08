@@ -111,3 +111,8 @@
     z-index: 0;
   }
 }
+
+/* Ensure Radix popper portals (Select/Dropdown) stay above mobile bottom sheet (z-1000) */
+[data-radix-popper-content-wrapper] {
+  z-index: 1100 !important;
+}
