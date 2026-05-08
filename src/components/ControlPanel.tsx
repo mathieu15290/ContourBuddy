@@ -74,7 +74,7 @@ export function ControlPanel({
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="z-[1100]">
+              <SelectContent>
                 <SelectItem value="1">1 mètre</SelectItem>
                 <SelectItem value="5">5 mètres</SelectItem>
                 <SelectItem value="10">10 mètres</SelectItem>
