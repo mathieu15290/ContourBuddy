@@ -109,8 +109,41 @@ export function ContourMap({
     contourLayerRef.current = L.layerGroup().addTo(map);
     leafletMapRef.current = map;
 
-    // Cartographic scale (bottom-left)
+    // Cartographic scale (bottom-left) — linear bar + ratio (1:X)
     L.control.scale({ position: "bottomleft", metric: true, imperial: false, maxWidth: 150 }).addTo(map);
+
+    const RatioControl = L.Control.extend({
+      options: { position: "bottomleft" as L.ControlPosition },
+      onAdd() {
+        const div = L.DomUtil.create("div", "leaflet-bar");
+        div.style.cssText =
+          "background:white;padding:2px 6px;font:11px/1.4 system-ui,sans-serif;color:#222;";
+        div.innerHTML = "1:—";
+        const update = () => {
+          // Meters per pixel at current center latitude
+          const center = map.getCenter();
+          const metersPerPx =
+            (40075016.686 * Math.cos((center.lat * Math.PI) / 180)) /
+            Math.pow(2, map.getZoom() + 8);
+          // Assume ~96 dpi → 1 px ≈ 0.0002645 m on screen
+          const screenMetersPerPx = 0.0002645833;
+          const ratio = metersPerPx / screenMetersPerPx;
+          // Round to a nice number
+          const nice = (n: number) => {
+            const pow = Math.pow(10, Math.floor(Math.log10(n)));
+            const base = n / pow;
+            const r = base < 1.5 ? 1 : base < 3 ? 2 : base < 7 ? 5 : 10;
+            return r * pow;
+          };
+          const rounded = Math.round(nice(ratio));
+          div.innerHTML = `1:${rounded.toLocaleString("fr-FR")}`;
+        };
+        update();
+        map.on("zoomend moveend", update);
+        return div;
+      },
+    });
+    new RatioControl().addTo(map);
 
     // === RECTANGLE DRAWING (mouse + touch) ===
     const getLatLngFromTouch = (touch: Touch): L.LatLng => {
