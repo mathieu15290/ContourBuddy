@@ -52,6 +52,7 @@ export function ControlPanel({
   onExportGeoJSON,
   onExportDXF,
   onExportKML,
+  onExportSVG,
   onExportPNG,
 }: Props) {
   return (
