@@ -170,6 +170,11 @@ export function ControlPanel({
               KML
               <span className="ml-auto text-xs text-muted-foreground">Google Earth</span>
             </Button>
+            <Button variant="outline" className="w-full justify-start" onClick={onExportSVG}>
+              <Shapes className="h-4 w-4" />
+              SVG
+              <span className="ml-auto text-xs text-muted-foreground">Illustrator, Inkscape</span>
+            </Button>
             <Button variant="outline" className="w-full justify-start" onClick={onExportPNG}>
               <Image className="h-4 w-4" />
               PNG
