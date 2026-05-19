@@ -94,3 +94,98 @@ export async function exportPNG(
   const dataUrl = await toPng(mapContainerEl, { quality: 0.95 });
   saveAs(dataUrl, `${filename}.png`);
 }
+
+/**
+ * Export contours as scalable SVG (Web Mercator projection, fitted to viewBox).
+ * Major curves are drawn thicker; an elevation label is added on the longest
+ * polyline of each elevation when it has enough points.
+ */
+export function exportSVG(
+  contours: ContourResult,
+  filename: string = "courbes-niveaux"
+) {
+  if (!contours.lines.length) return;
+
+  // Web Mercator projection (lat clamped). Returns unscaled x/y in radians-ish.
+  const project = (lon: number, lat: number): [number, number] => {
+    const x = (lon * Math.PI) / 180;
+    const clamped = Math.max(Math.min(lat, 85), -85);
+    const y = -Math.log(Math.tan(Math.PI / 4 + (clamped * Math.PI) / 360));
+    return [x, y];
+  };
+
+  // Bounding box in projected space
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  const projected: { line: typeof contours.lines[number]; pts: [number, number][] }[] = [];
+  for (const line of contours.lines) {
+    const pts = line.coordinates.map(([lon, lat]) => project(lon, lat));
+    for (const [x, y] of pts) {
+      if (x < minX) minX = x;
+      if (y < minY) minY = y;
+      if (x > maxX) maxX = x;
+      if (y > maxY) maxY = y;
+    }
+    projected.push({ line, pts });
+  }
+
+  const W = 2000;
+  const bboxW = maxX - minX || 1;
+  const bboxH = maxY - minY || 1;
+  const H = Math.round((W * bboxH) / bboxW);
+  const scale = W / bboxW;
+  const toSvg = ([x, y]: [number, number]): [number, number] => [
+    (x - minX) * scale,
+    (y - minY) * scale,
+  ];
+
+  // Group lines by elevation to pick a labeling candidate (longest polyline)
+  const longestByElev = new Map<number, { length: number; pts: [number, number][]; isMajor: boolean }>();
+
+  let paths = "";
+  for (const { line, pts } of projected) {
+    if (pts.length < 2) continue;
+    const svgPts = pts.map(toSvg);
+    const d =
+      "M" +
+      svgPts
+        .map(([x, y]) => `${x.toFixed(2)},${y.toFixed(2)}`)
+        .join(" L");
+    const stroke = line.isMajor ? "#5a3a1a" : "#8b6f4a";
+    const sw = line.isMajor ? 1.6 : 0.8;
+    paths += `<path d="${d}" fill="none" stroke="${stroke}" stroke-width="${sw}" stroke-linejoin="round" stroke-linecap="round"/>\n`;
+
+    // Track longest line for labeling
+    let len = 0;
+    for (let i = 1; i < svgPts.length; i++) {
+      const dx = svgPts[i][0] - svgPts[i - 1][0];
+      const dy = svgPts[i][1] - svgPts[i - 1][1];
+      len += Math.hypot(dx, dy);
+    }
+    const cur = longestByElev.get(line.elevation);
+    if (!cur || len > cur.length) {
+      longestByElev.set(line.elevation, { length: len, pts: svgPts, isMajor: line.isMajor });
+    }
+  }
+
+  // Labels: only on major curves with enough length
+  let labels = "";
+  for (const [elev, info] of longestByElev) {
+    if (!info.isMajor) continue;
+    if (info.length < 120) continue;
+    const mid = info.pts[Math.floor(info.pts.length / 2)];
+    const [x, y] = mid;
+    labels += `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" font-family="Helvetica, Arial, sans-serif" font-size="11" fill="#3a2410" text-anchor="middle" paint-order="stroke" stroke="#fff8ee" stroke-width="2.5">${elev}</text>\n`;
+  }
+
+  const svg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">
+<rect width="100%" height="100%" fill="#fff8ee"/>
+<g>
+${paths}</g>
+<g>
+${labels}</g>
+</svg>`;
+
+  const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
+  saveAs(blob, `${filename}.svg`);
+}
