@@ -15,6 +15,7 @@ import {
   Image,
   Globe,
   Loader2,
+  Shapes,
 } from "lucide-react";
 import type { ContourResult } from "@/lib/contours";
 import logo from "@/assets/logo.png";
