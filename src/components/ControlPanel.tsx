@@ -34,6 +34,7 @@ interface Props {
   onExportGeoJSON: () => void;
   onExportDXF: () => void;
   onExportKML: () => void;
+  onExportSVG: () => void;
   onExportPNG: () => void;
 }
 
