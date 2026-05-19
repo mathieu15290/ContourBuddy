@@ -15,6 +15,7 @@ import {
   Image,
   Globe,
   Loader2,
+  Shapes,
 } from "lucide-react";
 import type { ContourResult } from "@/lib/contours";
 import logo from "@/assets/logo.png";
@@ -33,6 +34,7 @@ interface Props {
   onExportGeoJSON: () => void;
   onExportDXF: () => void;
   onExportKML: () => void;
+  onExportSVG: () => void;
   onExportPNG: () => void;
 }
 
@@ -50,6 +52,7 @@ export function ControlPanel({
   onExportGeoJSON,
   onExportDXF,
   onExportKML,
+  onExportSVG,
   onExportPNG,
 }: Props) {
   return (
@@ -166,6 +169,11 @@ export function ControlPanel({
               <Globe className="h-4 w-4" />
               KML
               <span className="ml-auto text-xs text-muted-foreground">Google Earth</span>
+            </Button>
+            <Button variant="outline" className="w-full justify-start" onClick={onExportSVG}>
+              <Shapes className="h-4 w-4" />
+              SVG
+              <span className="ml-auto text-xs text-muted-foreground">Illustrator, Inkscape</span>
             </Button>
             <Button variant="outline" className="w-full justify-start" onClick={onExportPNG}>
               <Image className="h-4 w-4" />

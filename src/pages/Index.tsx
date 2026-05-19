@@ -5,7 +5,7 @@ import { ControlPanel } from "@/components/ControlPanel";
 import { ElevationProfile, type ProfilePoint } from "@/components/ElevationProfile";
 import { fetchElevationGrid, fetchElevationAlongLine, smoothElevationGrid, type ElevationGrid } from "@/lib/elevation";
 import { generateContours, type ContourResult } from "@/lib/contours";
-import { exportGeoJSON, exportDXF, exportKML, exportPNG } from "@/lib/export-utils";
+import { exportGeoJSON, exportDXF, exportKML, exportPNG, exportSVG } from "@/lib/export-utils";
 import { parseTrackFile, trackBounds, type TrackPoint } from "@/lib/track-import";
 import { LayersPanel } from "@/components/LayersPanel";
 import { DEFAULT_LAYERS, type LayerState, type LayerId } from "@/lib/layers";
@@ -151,6 +151,7 @@ const Index = () => {
     onExportGeoJSON: () => contours && exportGeoJSON(contours),
     onExportDXF: () => contours && exportDXF(contours),
     onExportKML: () => contours && exportKML(contours),
+    onExportSVG: () => contours && exportSVG(contours),
     onExportPNG: handleExportPNG,
   };
 
