@@ -102,6 +102,8 @@ export function ContourMap({
   // Refs to read latest helpers inside Leaflet handlers
   const onPolygonChangedRef = useRef(onPolygonChanged);
   useEffect(() => { onPolygonChangedRef.current = onPolygonChanged; }, [onPolygonChanged]);
+  // Reset bridge — assigned during map init, called from the JSX button
+  const resetPolygonRef = useRef<(() => void) | null>(null);
 
   // Initialize map
   useEffect(() => {
