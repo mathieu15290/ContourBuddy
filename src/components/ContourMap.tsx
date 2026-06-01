@@ -611,8 +611,6 @@ export function ContourMap({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Reset button bridge (set inside map init, called from JSX)
-  const resetPolygonRef = useRef<(() => void) | null>(null);
 
   // Highlight point on map from profile hover
   const highlightMarkerRef = useRef<L.CircleMarker | null>(null);
