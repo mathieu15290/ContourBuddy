@@ -9,6 +9,7 @@ import { exportGeoJSON, exportDXF, exportKML, exportPNG, exportSVG } from "@/lib
 import { parseTrackFile, trackBounds, type TrackPoint } from "@/lib/track-import";
 import { LayersPanel } from "@/components/LayersPanel";
 import { DEFAULT_LAYERS, type LayerState, type LayerId } from "@/lib/layers";
+import type { PolygonSelection } from "@/lib/polygon-utils";
 import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "@/hooks/use-theme";
 import { ChevronUp, ChevronDown, Moon, Sun, Upload } from "lucide-react";
@@ -33,6 +34,7 @@ const Index = () => {
   const [mobilePanel, setMobilePanel] = useState(false);
   const [importedTrack, setImportedTrack] = useState<{ points: TrackPoint[]; name: string } | null>(null);
   const [layers, setLayers] = useState<LayerState[]>(DEFAULT_LAYERS);
+  const [polygon, setPolygon] = useState<PolygonSelection | null>(null);
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const { toast } = useToast();
@@ -47,8 +49,17 @@ const Index = () => {
     setBounds(b);
     setContours(null);
     setGrid(null);
-    // Auto-open panel on mobile when bounds selected
     setMobilePanel(true);
+  }, []);
+
+  const handlePolygonChanged = useCallback((p: PolygonSelection | null) => {
+    setPolygon(p);
+    if (p) {
+      setBounds(p.bounds);
+      setContours(null);
+      setGrid(null);
+      setMobilePanel(true);
+    }
   }, []);
 
   const calculateArea = (b: Bounds): number => {
@@ -147,7 +158,7 @@ const Index = () => {
     contours,
     minElev,
     maxElev,
-    area: bounds ? calculateArea(bounds) : 0,
+    area: polygon ? polygon.areaKm2 : bounds ? calculateArea(bounds) : 0,
     onExportGeoJSON: () => contours && exportGeoJSON(contours),
     onExportDXF: () => contours && exportDXF(contours),
     onExportKML: () => contours && exportKML(contours),
@@ -225,6 +236,7 @@ const Index = () => {
             highlightPoint={hoveredProfilePoint}
             importedTrack={importedTrack}
             layers={layers}
+            onPolygonChanged={handlePolygonChanged}
           />
 
           <LayersPanel layers={layers} onChange={updateLayer} />
