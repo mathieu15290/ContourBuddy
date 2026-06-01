@@ -3,6 +3,12 @@ import L from "leaflet";
 import type { ContourResult } from "@/lib/contours";
 import { getContourColor } from "@/lib/contours";
 import type { LayerState, LayerId } from "@/lib/layers";
+import {
+  buildPolygonSelection,
+  clipPolylineToPolygon,
+  type LonLat,
+  type PolygonSelection,
+} from "@/lib/polygon-utils";
 
 interface HighlightPoint {
   lat: number;
@@ -24,7 +30,32 @@ interface Props {
   highlightPoint?: HighlightPoint | null;
   importedTrack?: { points: [number, number][]; name?: string } | null;
   layers: LayerState[];
+  onPolygonChanged?: (polygon: PolygonSelection | null) => void;
 }
+
+const POLY_COLOR = "hsl(152, 45%, 28%)";
+
+const vertexIcon = L.divIcon({
+  className: "poly-vertex",
+  html: `<div style="
+    width:14px;height:14px;border-radius:50%;
+    background:${POLY_COLOR};border:2px solid #fff;
+    box-shadow:0 1px 4px rgba(0,0,0,0.4);"></div>`,
+  iconSize: [18, 18],
+  iconAnchor: [9, 9],
+});
+
+const midpointIcon = L.divIcon({
+  className: "poly-midpoint",
+  html: `<div style="
+    width:14px;height:14px;border-radius:50%;
+    background:#fff;border:2px dashed ${POLY_COLOR};
+    display:flex;align-items:center;justify-content:center;
+    font:bold 11px/1 system-ui,sans-serif;color:${POLY_COLOR};
+    box-shadow:0 1px 3px rgba(0,0,0,0.25);">+</div>`,
+  iconSize: [18, 18],
+  iconAnchor: [9, 9],
+});
 
 export function ContourMap({
   center,
@@ -39,6 +70,7 @@ export function ContourMap({
   highlightPoint,
   importedTrack,
   layers = [],
+  onPolygonChanged,
 }: Props) {
   const leafletMapRef = useRef<L.Map | null>(null);
   const contourLayerRef = useRef<L.LayerGroup | null>(null);
@@ -58,6 +90,19 @@ export function ContourMap({
   const profilePolylineRef = useRef<L.Polyline | null>(null);
   const profileMarkersRef = useRef<L.CircleMarker[]>([]);
 
+  // Polygon state
+  const [drawingPolygon, setDrawingPolygon] = useState(false);
+  const drawingPolygonRef = useRef(false);
+  const polygonLatLngsRef = useRef<L.LatLng[]>([]);
+  const polygonLayerRef = useRef<L.Polygon | null>(null);
+  const polygonVertexMarkersRef = useRef<L.Marker[]>([]);
+  const polygonMidpointMarkersRef = useRef<L.Marker[]>([]);
+  const [hasPolygon, setHasPolygon] = useState(false);
+  const [polygonInfo, setPolygonInfo] = useState<PolygonSelection | null>(null);
+  // Refs to read latest helpers inside Leaflet handlers
+  const onPolygonChangedRef = useRef(onPolygonChanged);
+  useEffect(() => { onPolygonChangedRef.current = onPolygonChanged; }, [onPolygonChanged]);
+
   // Initialize map
   useEffect(() => {
     if (!mapRef.current || leafletMapRef.current) return;
@@ -66,7 +111,6 @@ export function ContourMap({
       center,
       zoom,
       zoomControl: true,
-      
     });
 
     const planLayer = L.tileLayer(
@@ -84,20 +128,19 @@ export function ContourMap({
       { maxZoom: 19, attribution: "© IGN", opacity: 0.7 }
     );
 
-    // Stack all base layers — visibility/opacity managed via the LayersPanel.
-    // Z-order matches the panel: plan (bottom) → satellite → cadastre (top).
     planLayer.addTo(map);
     satelliteLayer.addTo(map);
     cadastreLayer.addTo(map);
     baseLayersRef.current = { plan: planLayer, satellite: satelliteLayer, cadastre: cadastreLayer };
 
-    // Custom draw buttons — larger touch targets on mobile
+    // Custom draw buttons
     const DrawControl = L.Control.extend({
       options: { position: "topleft" as L.ControlPosition },
       onAdd() {
         const container = L.DomUtil.create("div", "leaflet-bar");
         container.innerHTML = `
           <a href="#" title="Dessiner un rectangle" style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;font-size:20px;cursor:pointer;background:white;" id="draw-rect-btn">▭</a>
+          <a href="#" title="Dessiner un polygone" style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;font-size:18px;cursor:pointer;background:white;" id="draw-poly-btn">⬠</a>
           <a href="#" title="Dessiner un profil altimétrique" style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;font-size:18px;cursor:pointer;background:white;" id="draw-profile-btn">📈</a>
         `;
         L.DomEvent.disableClickPropagation(container);
@@ -120,15 +163,12 @@ export function ContourMap({
           "background:white;padding:2px 6px;font:11px/1.4 system-ui,sans-serif;color:#222;";
         div.innerHTML = "1:—";
         const update = () => {
-          // Meters per pixel at current center latitude
-          const center = map.getCenter();
+          const c = map.getCenter();
           const metersPerPx =
-            (40075016.686 * Math.cos((center.lat * Math.PI) / 180)) /
+            (40075016.686 * Math.cos((c.lat * Math.PI) / 180)) /
             Math.pow(2, map.getZoom() + 8);
-          // Assume ~96 dpi → 1 px ≈ 0.0002645 m on screen
           const screenMetersPerPx = 0.0002645833;
           const ratio = metersPerPx / screenMetersPerPx;
-          // Round to a nice number
           const nice = (n: number) => {
             const pow = Math.pow(10, Math.floor(Math.log10(n)));
             const base = n / pow;
@@ -145,7 +185,170 @@ export function ContourMap({
     });
     new RatioControl().addTo(map);
 
-    // === RECTANGLE DRAWING (mouse + touch) ===
+    // ========================================================================
+    // POLYGON DRAWING & EDITING
+    // ========================================================================
+    const notifyPolygon = () => {
+      const coords: LonLat[] = polygonLatLngsRef.current.map((ll) => [ll.lng, ll.lat]);
+      if (coords.length < 3) {
+        setPolygonInfo(null);
+        onPolygonChangedRef.current?.(null);
+        return;
+      }
+      const sel = buildPolygonSelection(coords);
+      setPolygonInfo(sel);
+      onPolygonChangedRef.current?.(sel);
+    };
+
+    const refreshPolygonShape = () => {
+      const pts = polygonLatLngsRef.current;
+      if (polygonLayerRef.current) {
+        polygonLayerRef.current.setLatLngs(pts);
+      } else if (pts.length > 0) {
+        polygonLayerRef.current = L.polygon(pts, {
+          color: POLY_COLOR,
+          weight: 2,
+          fillOpacity: 0.1,
+        }).addTo(map);
+      }
+    };
+
+    const clearMidpoints = () => {
+      polygonMidpointMarkersRef.current.forEach((m) => map.removeLayer(m));
+      polygonMidpointMarkersRef.current = [];
+    };
+
+    const rebuildMidpoints = () => {
+      clearMidpoints();
+      const pts = polygonLatLngsRef.current;
+      if (pts.length < 3) return;
+      for (let i = 0; i < pts.length; i++) {
+        const a = pts[i];
+        const b = pts[(i + 1) % pts.length];
+        const mid = L.latLng((a.lat + b.lat) / 2, (a.lng + b.lng) / 2);
+        const marker = L.marker(mid, { icon: midpointIcon, interactive: true, keyboard: false });
+        marker.on("click", () => {
+          // Insert new vertex at index i+1
+          polygonLatLngsRef.current.splice(i + 1, 0, mid);
+          rebuildVertices();
+          refreshPolygonShape();
+          rebuildMidpoints();
+          notifyPolygon();
+        });
+        marker.addTo(map);
+        polygonMidpointMarkersRef.current.push(marker);
+      }
+    };
+
+    const clearVertices = () => {
+      polygonVertexMarkersRef.current.forEach((m) => map.removeLayer(m));
+      polygonVertexMarkersRef.current = [];
+    };
+
+    const rebuildVertices = () => {
+      clearVertices();
+      const pts = polygonLatLngsRef.current;
+      pts.forEach((latlng, idx) => {
+        const marker = L.marker(latlng, {
+          icon: vertexIcon,
+          draggable: true,
+          autoPan: true,
+        });
+        marker.on("drag", (ev) => {
+          const m = ev.target as L.Marker;
+          polygonLatLngsRef.current[idx] = m.getLatLng();
+          refreshPolygonShape();
+        });
+        marker.on("dragend", () => {
+          rebuildMidpoints();
+          notifyPolygon();
+        });
+        marker.on("contextmenu", (ev) => {
+          L.DomEvent.preventDefault(ev as unknown as Event);
+          if (polygonLatLngsRef.current.length <= 3) return;
+          polygonLatLngsRef.current.splice(idx, 1);
+          rebuildVertices();
+          refreshPolygonShape();
+          rebuildMidpoints();
+          notifyPolygon();
+        });
+        marker.addTo(map);
+        polygonVertexMarkersRef.current.push(marker);
+      });
+    };
+
+    const resetPolygon = () => {
+      polygonLatLngsRef.current = [];
+      clearVertices();
+      clearMidpoints();
+      if (polygonLayerRef.current) {
+        map.removeLayer(polygonLayerRef.current);
+        polygonLayerRef.current = null;
+      }
+      setHasPolygon(false);
+      setPolygonInfo(null);
+      onPolygonChangedRef.current?.(null);
+    };
+    // Expose to JSX reset button via a closure on window-less ref
+    (resetPolygonRef as React.MutableRefObject<(() => void) | null>).current = resetPolygon;
+
+    const addPolygonVertex = (latlng: L.LatLng) => {
+      polygonLatLngsRef.current.push(latlng);
+      // Light "in progress" preview marker
+      const tmp = L.circleMarker(latlng, {
+        radius: 5,
+        color: POLY_COLOR,
+        fillColor: POLY_COLOR,
+        fillOpacity: 1,
+      }).addTo(map);
+      polygonMidpointMarkersRef.current.push(tmp as unknown as L.Marker);
+      if (polygonLayerRef.current) {
+        polygonLayerRef.current.setLatLngs(polygonLatLngsRef.current);
+      } else if (polygonLatLngsRef.current.length >= 2) {
+        polygonLayerRef.current = L.polygon(polygonLatLngsRef.current, {
+          color: POLY_COLOR,
+          weight: 2,
+          fillOpacity: 0.1,
+          dashArray: "4,4",
+        }).addTo(map);
+      }
+    };
+
+    const finishPolygon = () => {
+      if (polygonLatLngsRef.current.length < 3) {
+        // Cancel
+        resetPolygon();
+        drawingPolygonRef.current = false;
+        setDrawingPolygon(false);
+        map.getContainer().style.cursor = "";
+        map.doubleClickZoom.enable();
+        return;
+      }
+      drawingPolygonRef.current = false;
+      setDrawingPolygon(false);
+      map.getContainer().style.cursor = "";
+      map.doubleClickZoom.enable();
+      // Clear preview markers (we reused midpoints array as scratch)
+      clearMidpoints();
+      // Replace dashed in-progress polygon with solid one
+      if (polygonLayerRef.current) {
+        map.removeLayer(polygonLayerRef.current);
+        polygonLayerRef.current = null;
+      }
+      polygonLayerRef.current = L.polygon(polygonLatLngsRef.current, {
+        color: POLY_COLOR,
+        weight: 2,
+        fillOpacity: 0.1,
+      }).addTo(map);
+      rebuildVertices();
+      rebuildMidpoints();
+      setHasPolygon(true);
+      notifyPolygon();
+    };
+
+    // ========================================================================
+    // RECTANGLE DRAWING (mouse + touch)
+    // ========================================================================
     const getLatLngFromTouch = (touch: Touch): L.LatLng => {
       const containerPoint = map.mouseEventToContainerPoint({
         clientX: touch.clientX,
@@ -199,11 +402,9 @@ export function ContourMap({
         east: bounds.getEast(),
       });
 
-      // Auto-fit view to selection
       map.fitBounds(bounds, { padding: [40, 40], maxZoom: 17 });
     };
 
-    // Touch handlers for rectangle
     const container = map.getContainer();
     const onTouchStart = (e: TouchEvent) => {
       if (!drawingRef.current || e.touches.length !== 1) return;
@@ -249,10 +450,17 @@ export function ContourMap({
     map.on("mousemove", onMouseMove);
     map.on("mouseup", onMouseUp);
 
-    // === PROFILE DRAWING ===
-    const onProfileClick = (e: L.LeafletMouseEvent) => {
-      if (!drawingProfileRef.current) return;
-      addProfilePoint(e.latlng);
+    // ========================================================================
+    // PROFILE & POLYGON CLICK (shared "map click" handler)
+    // ========================================================================
+    const onMapClick = (e: L.LeafletMouseEvent) => {
+      if (drawingPolygonRef.current) {
+        addPolygonVertex(e.latlng);
+        return;
+      }
+      if (drawingProfileRef.current) {
+        addProfilePoint(e.latlng);
+      }
     };
 
     const addProfilePoint = (latlng: L.LatLng) => {
@@ -277,73 +485,105 @@ export function ContourMap({
       }
     };
 
-    const onProfileDblClick = () => {
-      if (!drawingProfileRef.current) return;
-      finishProfile();
-    };
-
-    // Touch: tap to add point, long-press to finish
-    let profileTapTimer: ReturnType<typeof setTimeout> | null = null;
-    let profileTouchMoved = false;
-
-    const onProfileTouchStart = (e: TouchEvent) => {
-      if (!drawingProfileRef.current || e.touches.length !== 1) return;
-      profileTouchMoved = false;
-      profileTapTimer = setTimeout(() => {
-        // Long press = finish profile
-        if (!profileTouchMoved && drawingProfileRef.current) {
-          finishProfile();
-        }
-        profileTapTimer = null;
-      }, 600);
-    };
-
-    const onProfileTouchMove = () => {
-      if (!drawingProfileRef.current) return;
-      profileTouchMoved = true;
-      if (profileTapTimer) { clearTimeout(profileTapTimer); profileTapTimer = null; }
-    };
-
-    const onProfileTouchEnd = (e: TouchEvent) => {
-      if (!drawingProfileRef.current) return;
-      if (profileTapTimer) { clearTimeout(profileTapTimer); profileTapTimer = null; }
-      if (!profileTouchMoved && e.changedTouches.length === 1) {
-        const latlng = getLatLngFromTouch(e.changedTouches[0]);
-        addProfilePoint(latlng);
+    const onMapDblClick = () => {
+      if (drawingPolygonRef.current) {
+        finishPolygon();
+        return;
+      }
+      if (drawingProfileRef.current) {
+        finishProfile();
       }
     };
 
-    container.addEventListener("touchstart", onProfileTouchStart, { passive: true });
-    container.addEventListener("touchmove", onProfileTouchMove, { passive: true });
-    container.addEventListener("touchend", onProfileTouchEnd, { passive: true });
+    // Touch (profile + polygon): tap to add, long-press to finish
+    let tapTimer: ReturnType<typeof setTimeout> | null = null;
+    let touchMoved = false;
 
-    map.on("click", onProfileClick);
-    map.on("dblclick", onProfileDblClick);
+    const onSharedTouchStart = (e: TouchEvent) => {
+      if ((!drawingProfileRef.current && !drawingPolygonRef.current) || e.touches.length !== 1) return;
+      touchMoved = false;
+      tapTimer = setTimeout(() => {
+        if (!touchMoved) {
+          if (drawingPolygonRef.current) finishPolygon();
+          else if (drawingProfileRef.current) finishProfile();
+        }
+        tapTimer = null;
+      }, 600);
+    };
+
+    const onSharedTouchMove = () => {
+      if (!drawingProfileRef.current && !drawingPolygonRef.current) return;
+      touchMoved = true;
+      if (tapTimer) { clearTimeout(tapTimer); tapTimer = null; }
+    };
+
+    const onSharedTouchEnd = (e: TouchEvent) => {
+      if (!drawingProfileRef.current && !drawingPolygonRef.current) return;
+      if (tapTimer) { clearTimeout(tapTimer); tapTimer = null; }
+      if (!touchMoved && e.changedTouches.length === 1) {
+        const latlng = getLatLngFromTouch(e.changedTouches[0]);
+        if (drawingPolygonRef.current) addPolygonVertex(latlng);
+        else addProfilePoint(latlng);
+      }
+    };
+
+    container.addEventListener("touchstart", onSharedTouchStart, { passive: true });
+    container.addEventListener("touchmove", onSharedTouchMove, { passive: true });
+    container.addEventListener("touchend", onSharedTouchEnd, { passive: true });
+
+    map.on("click", onMapClick);
+    map.on("dblclick", onMapDblClick);
 
     // Button click handlers
     setTimeout(() => {
+      const exitOtherModes = () => {
+        drawingRef.current = false; setDrawing(false);
+        drawingProfileRef.current = false; setDrawingProfile(false);
+        drawingPolygonRef.current = false; setDrawingPolygon(false);
+      };
+
       const btn = document.getElementById("draw-rect-btn");
       if (btn) {
         btn.addEventListener("click", (e) => {
           e.preventDefault();
-          drawingProfileRef.current = false;
-          setDrawingProfile(false);
-          drawingRef.current = !drawingRef.current;
-          setDrawing(drawingRef.current);
-          map.getContainer().style.cursor = drawingRef.current ? "crosshair" : "";
-          if (drawingRef.current) map.doubleClickZoom.enable();
+          const next = !drawingRef.current;
+          exitOtherModes();
+          drawingRef.current = next;
+          setDrawing(next);
+          map.getContainer().style.cursor = next ? "crosshair" : "";
+          if (next) map.doubleClickZoom.enable();
         });
       }
+
+      const polyBtn = document.getElementById("draw-poly-btn");
+      if (polyBtn) {
+        polyBtn.addEventListener("click", (e) => {
+          e.preventDefault();
+          const next = !drawingPolygonRef.current;
+          exitOtherModes();
+          drawingPolygonRef.current = next;
+          setDrawingPolygon(next);
+          map.getContainer().style.cursor = next ? "crosshair" : "";
+          if (next) {
+            map.doubleClickZoom.disable();
+            // Reset previous polygon if any
+            resetPolygon();
+          } else {
+            map.doubleClickZoom.enable();
+          }
+        });
+      }
+
       const profileBtn = document.getElementById("draw-profile-btn");
       if (profileBtn) {
         profileBtn.addEventListener("click", (e) => {
           e.preventDefault();
-          drawingRef.current = false;
-          setDrawing(false);
-          drawingProfileRef.current = !drawingProfileRef.current;
-          setDrawingProfile(drawingProfileRef.current);
-          map.getContainer().style.cursor = drawingProfileRef.current ? "crosshair" : "";
-          if (drawingProfileRef.current) {
+          const next = !drawingProfileRef.current;
+          exitOtherModes();
+          drawingProfileRef.current = next;
+          setDrawingProfile(next);
+          map.getContainer().style.cursor = next ? "crosshair" : "";
+          if (next) {
             map.doubleClickZoom.disable();
             profilePointsRef.current = [];
             if (profilePolylineRef.current) { map.removeLayer(profilePolylineRef.current); profilePolylineRef.current = null; }
@@ -360,14 +600,17 @@ export function ContourMap({
       container.removeEventListener("touchstart", onTouchStart);
       container.removeEventListener("touchmove", onTouchMove);
       container.removeEventListener("touchend", onTouchEnd);
-      container.removeEventListener("touchstart", onProfileTouchStart);
-      container.removeEventListener("touchmove", onProfileTouchMove);
-      container.removeEventListener("touchend", onProfileTouchEnd);
+      container.removeEventListener("touchstart", onSharedTouchStart);
+      container.removeEventListener("touchmove", onSharedTouchMove);
+      container.removeEventListener("touchend", onSharedTouchEnd);
       map.remove();
       leafletMapRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Reset button bridge (set inside map init, called from JSX)
+  const resetPolygonRef = useRef<(() => void) | null>(null);
 
   // Highlight point on map from profile hover
   const highlightMarkerRef = useRef<L.CircleMarker | null>(null);
@@ -433,7 +676,7 @@ export function ContourMap({
     }
   }, [center, zoom]);
 
-  // Draw contours
+  // Draw contours (with optional polygon clipping)
   useEffect(() => {
     const layer = contourLayerRef.current;
     if (!layer) return;
@@ -444,35 +687,43 @@ export function ContourMap({
     const labelsState = layers.find((l) => l.id === "labels");
     const showLabels = labelsState?.visible !== false;
     const baseOpacity = contoursState?.opacity ?? 1;
+    const clipPoly = polygonInfo?.coordinates ?? null;
 
     for (const line of contours.lines) {
       if (line.coordinates.length < 2) continue;
-      const latLngs = line.coordinates.map(
-        ([lon, lat]) => [lat, lon] as [number, number]
-      );
       const color = getContourColor(line.elevation, minElev, maxElev);
-      const polyline = L.polyline(latLngs, {
-        color,
-        weight: line.isMajor ? 3 : 1,
-        opacity: (line.isMajor ? 0.9 : 0.6) * baseOpacity,
-      });
-      if (line.isMajor && showLabels) {
-        polyline.bindTooltip(`${line.elevation}m`, {
-          permanent: true,
-          direction: "center",
-          className: "contour-label",
+
+      const drawPolyline = (coords: [number, number][]) => {
+        const latLngs = coords.map(([lon, lat]) => [lat, lon] as [number, number]);
+        const polyline = L.polyline(latLngs, {
+          color,
+          weight: line.isMajor ? 3 : 1,
+          opacity: (line.isMajor ? 0.9 : 0.6) * baseOpacity,
         });
+        if (line.isMajor && showLabels) {
+          polyline.bindTooltip(`${line.elevation}m`, {
+            permanent: true,
+            direction: "center",
+            className: "contour-label",
+          });
+        }
+        polyline.addTo(layer);
+      };
+
+      if (clipPoly) {
+        const segments = clipPolylineToPolygon(line.coordinates as LonLat[], clipPoly);
+        for (const seg of segments) drawPolyline(seg);
+      } else {
+        drawPolyline(line.coordinates);
       }
-      polyline.addTo(layer);
     }
-  }, [contours, minElev, maxElev, layers]);
+  }, [contours, minElev, maxElev, layers, polygonInfo]);
 
   // Apply layer visibility & opacity to base IGN layers and overlays
   useEffect(() => {
     const map = leafletMapRef.current;
     if (!map) return;
 
-    // Base IGN layers
     (["plan", "satellite", "cadastre"] as const).forEach((id) => {
       const tile = baseLayersRef.current[id];
       if (!tile) return;
@@ -486,7 +737,6 @@ export function ContourMap({
       }
     });
 
-    // Contours layer group visibility (opacity is baked into polylines above)
     const contourState = layers.find((l) => l.id === "contours");
     const cg = contourLayerRef.current;
     if (cg) {
@@ -497,7 +747,6 @@ export function ContourMap({
       }
     }
 
-    // Imported track layer
     const trackState = layers.find((l) => l.id === "track");
     const tg = importedTrackLayerRef.current;
     if (tg) {
@@ -568,6 +817,11 @@ export function ContourMap({
     });
   };
 
+  const handleResetPolygon = useCallback(() => {
+    resetPolygonRef.current?.();
+    setHasPolygon(false);
+  }, []);
+
   return (
     <>
       <div
@@ -580,17 +834,35 @@ export function ContourMap({
           Touchez et glissez pour dessiner un rectangle
         </div>
       )}
+      {drawingPolygon && (
+        <div className="absolute top-2 left-1/2 -translate-x-1/2 z-[1000] bg-card text-foreground text-xs sm:text-sm px-3 py-1.5 rounded-md shadow-md border border-border max-w-[90vw] text-center">
+          Cliquez pour ajouter un sommet — double-clic ou appui long pour terminer
+        </div>
+      )}
       {drawingProfile && (
         <div className="absolute top-2 left-1/2 -translate-x-1/2 z-[1000] bg-card text-foreground text-xs sm:text-sm px-3 py-1.5 rounded-md shadow-md border border-border max-w-[90vw] text-center">
           Touchez pour tracer — appui long pour terminer
         </div>
       )}
-      {selectionInfo && (
+      {hasPolygon && (
+        <button
+          onClick={handleResetPolygon}
+          className="absolute top-2 right-2 z-[1000] bg-card text-foreground text-xs px-3 py-1.5 rounded-md shadow-md border border-border hover:bg-accent hover:text-accent-foreground transition-colors"
+        >
+          Réinitialiser le polygone
+        </button>
+      )}
+      {polygonInfo && (
+        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-[1000] bg-card text-foreground text-xs px-2.5 py-1.5 rounded-md shadow-md border border-border">
+          Polygone : {polygonInfo.coordinates.length} sommets — {polygonInfo.areaKm2.toFixed(2)} km²
+        </div>
+      )}
+      {selectionInfo && !polygonInfo && (
         <div className="absolute bottom-2 right-2 z-[1000] bg-card text-foreground text-xs px-2.5 py-1.5 rounded-md shadow-md border border-border">
           Zone : {formatMeters(selectionInfo.widthM)} × {formatMeters(selectionInfo.heightM)}
         </div>
       )}
-      {selectionOffscreen && selectedBounds && (
+      {selectionOffscreen && selectedBounds && !polygonInfo && (
         <button
           onClick={recenterOnSelection}
           className="absolute bottom-12 right-2 z-[1000] bg-card text-foreground text-xs px-3 py-1.5 rounded-md shadow-md border border-border hover:bg-accent hover:text-accent-foreground transition-colors"
