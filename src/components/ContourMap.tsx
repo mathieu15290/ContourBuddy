@@ -608,8 +608,10 @@ export function ContourMap({
             map.doubleClickZoom.disable();
             // Reset previous polygon if any
             resetPolygon();
+            setPolygonInProgressCount(0);
           } else {
             map.doubleClickZoom.enable();
+            setPolygonInProgressCount(0);
           }
         });
       }
