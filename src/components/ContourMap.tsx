@@ -78,6 +78,8 @@ export function ContourMap({
   const leafletMapRef = useRef<L.Map | null>(null);
   const contourLayerRef = useRef<L.LayerGroup | null>(null);
   const baseLayersRef = useRef<Partial<Record<LayerId, L.TileLayer>>>({});
+  const slopeOverlayRef = useRef<L.ImageOverlay | null>(null);
+  const aspectOverlayRef = useRef<L.ImageOverlay | null>(null);
   const rectRef = useRef<L.Rectangle | null>(null);
   const [drawing, setDrawing] = useState(false);
   const drawingRef = useRef(false);
