@@ -934,9 +934,33 @@ export function ContourMap({
         </div>
       )}
       {drawingPolygon && (
-        <div className="absolute top-2 left-1/2 -translate-x-1/2 z-[1000] bg-card text-foreground text-xs sm:text-sm px-3 py-1.5 rounded-md shadow-md border border-border max-w-[90vw] text-center">
-          Cliquez pour ajouter un sommet — double-clic ou appui long pour terminer
-        </div>
+        <>
+          <div className="absolute top-2 left-1/2 -translate-x-1/2 z-[1000] bg-card text-foreground text-xs sm:text-sm px-3 py-1.5 rounded-md shadow-md border border-border max-w-[90vw] text-center">
+            Cliquez pour ajouter un sommet ({polygonInProgressCount}) — minimum 3
+          </div>
+          <div className="absolute top-12 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-2">
+            <button
+              onClick={() => finishPolygonRef.current?.()}
+              disabled={polygonInProgressCount < 3}
+              className="bg-primary text-primary-foreground text-xs sm:text-sm px-4 py-2 rounded-md shadow-md font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
+            >
+              ✓ Valider la zone
+            </button>
+            <button
+              onClick={() => {
+                resetPolygonRef.current?.();
+                setPolygonInProgressCount(0);
+                setDrawingPolygon(false);
+                drawingPolygonRef.current = false;
+                leafletMapRef.current?.getContainer().style.setProperty("cursor", "");
+                leafletMapRef.current?.doubleClickZoom.enable();
+              }}
+              className="bg-card text-foreground text-xs sm:text-sm px-3 py-2 rounded-md shadow-md border border-border hover:bg-muted transition-colors"
+            >
+              Annuler
+            </button>
+          </div>
+        </>
       )}
       {drawingProfile && (
         <div className="absolute top-2 left-1/2 -translate-x-1/2 z-[1000] bg-card text-foreground text-xs sm:text-sm px-3 py-1.5 rounded-md shadow-md border border-border max-w-[90vw] text-center">
