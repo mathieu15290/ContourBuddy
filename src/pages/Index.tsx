@@ -238,6 +238,8 @@ const Index = () => {
             importedTrack={importedTrack}
             layers={layers}
             onPolygonChanged={handlePolygonChanged}
+            onPolygonChanged={handlePolygonChanged}
+            terrain={terrain}
           />
 
           <LayersPanel layers={layers} onChange={updateLayer} />
