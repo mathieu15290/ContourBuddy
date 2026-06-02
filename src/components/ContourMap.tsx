@@ -73,6 +73,7 @@ export function ContourMap({
   importedTrack,
   layers = [],
   onPolygonChanged,
+  terrain = null,
 }: Props) {
   const leafletMapRef = useRef<L.Map | null>(null);
   const contourLayerRef = useRef<L.LayerGroup | null>(null);
