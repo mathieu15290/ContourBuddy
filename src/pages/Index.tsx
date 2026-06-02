@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useMemo } from "react";
 import { AddressSearch } from "@/components/AddressSearch";
 import { ContourMap } from "@/components/ContourMap";
 import { ControlPanel } from "@/components/ControlPanel";
@@ -10,6 +10,7 @@ import { parseTrackFile, trackBounds, type TrackPoint } from "@/lib/track-import
 import { LayersPanel } from "@/components/LayersPanel";
 import { DEFAULT_LAYERS, type LayerState, type LayerId } from "@/lib/layers";
 import type { PolygonSelection } from "@/lib/polygon-utils";
+import { computeTerrain, type TerrainGrid } from "@/lib/terrain";
 import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "@/hooks/use-theme";
 import { ChevronUp, ChevronDown, Moon, Sun, Upload } from "lucide-react";
@@ -39,6 +40,11 @@ const Index = () => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const { toast } = useToast();
   const { dark, toggle: toggleTheme } = useTheme();
+
+  const terrain: TerrainGrid | null = useMemo(
+    () => (grid ? computeTerrain(grid) : null),
+    [grid]
+  );
 
   const handleAddressSelect = useCallback((lon: number, lat: number, label: string) => {
     setCenter([lat, lon]);
@@ -237,6 +243,7 @@ const Index = () => {
             importedTrack={importedTrack}
             layers={layers}
             onPolygonChanged={handlePolygonChanged}
+            terrain={terrain}
           />
 
           <LayersPanel layers={layers} onChange={updateLayer} />

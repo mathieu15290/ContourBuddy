@@ -1,4 +1,12 @@
-export type LayerId = "plan" | "satellite" | "cadastre" | "contours" | "labels" | "track";
+export type LayerId =
+  | "plan"
+  | "satellite"
+  | "cadastre"
+  | "contours"
+  | "labels"
+  | "track"
+  | "slope"
+  | "aspect";
 
 export interface LayerState {
   id: LayerId;
@@ -10,10 +18,12 @@ export interface LayerState {
 }
 
 export const DEFAULT_LAYERS: LayerState[] = [
-  { id: "track",     label: "Trace importée",      visible: true, opacity: 0.9 },
-  { id: "labels",    label: "Étiquettes d'altitude", visible: true, opacity: 1, noOpacity: true },
-  { id: "contours",  label: "Courbes de niveaux",  visible: true, opacity: 1 },
-  { id: "cadastre",  label: "Cadastre",            visible: false, opacity: 0.7 },
-  { id: "satellite", label: "Photo aérienne",      visible: false, opacity: 1 },
-  { id: "plan",      label: "Plan IGN",            visible: true, opacity: 1 },
+  { id: "track",     label: "Trace importée",        visible: true,  opacity: 0.9 },
+  { id: "labels",    label: "Étiquettes d'altitude", visible: true,  opacity: 1, noOpacity: true },
+  { id: "contours",  label: "Courbes de niveaux",    visible: true,  opacity: 1 },
+  { id: "aspect",    label: "Exposition (azimut)",   visible: false, opacity: 0.6 },
+  { id: "slope",     label: "Pentes (permaculture)", visible: false, opacity: 0.6 },
+  { id: "cadastre",  label: "Cadastre",              visible: false, opacity: 0.7 },
+  { id: "satellite", label: "Photo aérienne",        visible: false, opacity: 1 },
+  { id: "plan",      label: "Plan IGN",              visible: true,  opacity: 1 },
 ];

@@ -9,6 +9,7 @@ import {
   type LonLat,
   type PolygonSelection,
 } from "@/lib/polygon-utils";
+import { renderTerrainCanvas, type TerrainGrid } from "@/lib/terrain";
 
 interface HighlightPoint {
   lat: number;
@@ -31,6 +32,7 @@ interface Props {
   importedTrack?: { points: [number, number][]; name?: string } | null;
   layers: LayerState[];
   onPolygonChanged?: (polygon: PolygonSelection | null) => void;
+  terrain?: TerrainGrid | null;
 }
 
 const POLY_COLOR = "hsl(152, 45%, 28%)";
@@ -71,10 +73,13 @@ export function ContourMap({
   importedTrack,
   layers = [],
   onPolygonChanged,
+  terrain = null,
 }: Props) {
   const leafletMapRef = useRef<L.Map | null>(null);
   const contourLayerRef = useRef<L.LayerGroup | null>(null);
   const baseLayersRef = useRef<Partial<Record<LayerId, L.TileLayer>>>({});
+  const slopeOverlayRef = useRef<L.ImageOverlay | null>(null);
+  const aspectOverlayRef = useRef<L.ImageOverlay | null>(null);
   const rectRef = useRef<L.Rectangle | null>(null);
   const [drawing, setDrawing] = useState(false);
   const drawingRef = useRef(false);
@@ -719,6 +724,47 @@ export function ContourMap({
     }
   }, [contours, minElev, maxElev, layers, polygonInfo]);
 
+  // Build / refresh slope + aspect raster overlays whenever terrain or polygon changes
+  useEffect(() => {
+    const map = leafletMapRef.current;
+    if (!map) return;
+
+    const removeOverlay = (
+      ref: React.MutableRefObject<L.ImageOverlay | null>
+    ) => {
+      if (ref.current) {
+        map.removeLayer(ref.current);
+        ref.current = null;
+      }
+    };
+    removeOverlay(slopeOverlayRef);
+    removeOverlay(aspectOverlayRef);
+    if (!terrain) return;
+
+    const bounds: L.LatLngBoundsLiteral = [
+      [terrain.minLat, terrain.minLon],
+      [terrain.maxLat, terrain.maxLon],
+    ];
+    const clip = polygonInfo?.coordinates ?? null;
+    const slopeCanvas = renderTerrainCanvas(terrain, "slope", 4, clip);
+    const aspectCanvas = renderTerrainCanvas(terrain, "aspect", 4, clip);
+
+    const slopeState = layers.find((l) => l.id === "slope");
+    const aspectState = layers.find((l) => l.id === "aspect");
+
+    slopeOverlayRef.current = L.imageOverlay(slopeCanvas.toDataURL(), bounds, {
+      opacity: slopeState?.opacity ?? 0.6,
+      interactive: false,
+    });
+    aspectOverlayRef.current = L.imageOverlay(aspectCanvas.toDataURL(), bounds, {
+      opacity: aspectState?.opacity ?? 0.6,
+      interactive: false,
+    });
+    if (slopeState?.visible) slopeOverlayRef.current.addTo(map);
+    if (aspectState?.visible) aspectOverlayRef.current.addTo(map);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [terrain, polygonInfo]);
+
   // Apply layer visibility & opacity to base IGN layers and overlays
   useEffect(() => {
     const map = leafletMapRef.current;
@@ -761,6 +807,24 @@ export function ContourMap({
         map.removeLayer(tg);
       }
     }
+
+    // Slope + aspect raster overlays
+    const applyOverlay = (
+      id: "slope" | "aspect",
+      ref: React.MutableRefObject<L.ImageOverlay | null>
+    ) => {
+      const state = layers.find((l) => l.id === id);
+      const ov = ref.current;
+      if (!ov || !state) return;
+      if (state.visible) {
+        if (!map.hasLayer(ov)) ov.addTo(map);
+        ov.setOpacity(state.opacity);
+      } else if (map.hasLayer(ov)) {
+        map.removeLayer(ov);
+      }
+    };
+    applyOverlay("slope", slopeOverlayRef);
+    applyOverlay("aspect", aspectOverlayRef);
   }, [layers, contours, importedTrack]);
 
   // Selection ↔ viewport coherence watchdog
