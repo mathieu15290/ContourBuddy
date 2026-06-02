@@ -724,6 +724,47 @@ export function ContourMap({
     }
   }, [contours, minElev, maxElev, layers, polygonInfo]);
 
+  // Build / refresh slope + aspect raster overlays whenever terrain or polygon changes
+  useEffect(() => {
+    const map = leafletMapRef.current;
+    if (!map) return;
+
+    const removeOverlay = (
+      ref: React.MutableRefObject<L.ImageOverlay | null>
+    ) => {
+      if (ref.current) {
+        map.removeLayer(ref.current);
+        ref.current = null;
+      }
+    };
+    removeOverlay(slopeOverlayRef);
+    removeOverlay(aspectOverlayRef);
+    if (!terrain) return;
+
+    const bounds: L.LatLngBoundsLiteral = [
+      [terrain.minLat, terrain.minLon],
+      [terrain.maxLat, terrain.maxLon],
+    ];
+    const clip = polygonInfo?.coordinates ?? null;
+    const slopeCanvas = renderTerrainCanvas(terrain, "slope", 4, clip);
+    const aspectCanvas = renderTerrainCanvas(terrain, "aspect", 4, clip);
+
+    const slopeState = layers.find((l) => l.id === "slope");
+    const aspectState = layers.find((l) => l.id === "aspect");
+
+    slopeOverlayRef.current = L.imageOverlay(slopeCanvas.toDataURL(), bounds, {
+      opacity: slopeState?.opacity ?? 0.6,
+      interactive: false,
+    });
+    aspectOverlayRef.current = L.imageOverlay(aspectCanvas.toDataURL(), bounds, {
+      opacity: aspectState?.opacity ?? 0.6,
+      interactive: false,
+    });
+    if (slopeState?.visible) slopeOverlayRef.current.addTo(map);
+    if (aspectState?.visible) aspectOverlayRef.current.addTo(map);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [terrain, polygonInfo]);
+
   // Apply layer visibility & opacity to base IGN layers and overlays
   useEffect(() => {
     const map = leafletMapRef.current;
