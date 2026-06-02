@@ -109,6 +109,8 @@ export function ContourMap({
   useEffect(() => { onPolygonChangedRef.current = onPolygonChanged; }, [onPolygonChanged]);
   // Reset bridge — assigned during map init, called from the JSX button
   const resetPolygonRef = useRef<(() => void) | null>(null);
+  const finishPolygonRef = useRef<(() => void) | null>(null);
+  const [polygonInProgressCount, setPolygonInProgressCount] = useState(0);
 
   // Initialize map
   useEffect(() => {
