@@ -41,6 +41,11 @@ const Index = () => {
   const { toast } = useToast();
   const { dark, toggle: toggleTheme } = useTheme();
 
+  const terrain: TerrainGrid | null = useMemo(
+    () => (grid ? computeTerrain(grid) : null),
+    [grid]
+  );
+
   const handleAddressSelect = useCallback((lon: number, lat: number, label: string) => {
     setCenter([lat, lon]);
     setZoom(15);
