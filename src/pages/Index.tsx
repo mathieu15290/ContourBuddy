@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useMemo } from "react";
 import { AddressSearch } from "@/components/AddressSearch";
 import { ContourMap } from "@/components/ContourMap";
 import { ControlPanel } from "@/components/ControlPanel";
@@ -10,6 +10,7 @@ import { parseTrackFile, trackBounds, type TrackPoint } from "@/lib/track-import
 import { LayersPanel } from "@/components/LayersPanel";
 import { DEFAULT_LAYERS, type LayerState, type LayerId } from "@/lib/layers";
 import type { PolygonSelection } from "@/lib/polygon-utils";
+import { computeTerrain, type TerrainGrid } from "@/lib/terrain";
 import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "@/hooks/use-theme";
 import { ChevronUp, ChevronDown, Moon, Sun, Upload } from "lucide-react";
