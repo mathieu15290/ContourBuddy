@@ -384,6 +384,7 @@ export function ContourMap({
       setHasPolygon(true);
       notifyPolygon();
     };
+    (finishPolygonRef as React.MutableRefObject<(() => void) | null>).current = finishPolygon;
 
     // ========================================================================
     // RECTANGLE DRAWING (mouse + touch)
