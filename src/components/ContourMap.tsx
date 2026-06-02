@@ -109,6 +109,8 @@ export function ContourMap({
   useEffect(() => { onPolygonChangedRef.current = onPolygonChanged; }, [onPolygonChanged]);
   // Reset bridge — assigned during map init, called from the JSX button
   const resetPolygonRef = useRef<(() => void) | null>(null);
+  const finishPolygonRef = useRef<(() => void) | null>(null);
+  const [polygonInProgressCount, setPolygonInProgressCount] = useState(0);
 
   // Initialize map
   useEffect(() => {
@@ -228,15 +230,42 @@ export function ContourMap({
     const rebuildMidpoints = () => {
       clearMidpoints();
       const pts = polygonLatLngsRef.current;
-      if (pts.length < 3) return;
+      if (pts.length < 2) return;
       for (let i = 0; i < pts.length; i++) {
         const a = pts[i];
         const b = pts[(i + 1) % pts.length];
         const mid = L.latLng((a.lat + b.lat) / 2, (a.lng + b.lng) / 2);
-        const marker = L.marker(mid, { icon: midpointIcon, interactive: true, keyboard: false });
+        const insertIdx = i + 1;
+        const marker = L.marker(mid, {
+          icon: midpointIcon,
+          draggable: true,
+          autoPan: true,
+          keyboard: false,
+        });
+        let inserted = false;
+        // PermaBuddy-style stretch: dragging a midpoint inserts a new
+        // vertex at insertIdx, then live-updates it as the pointer moves.
+        marker.on("dragstart", () => {
+          if (inserted) return;
+          polygonLatLngsRef.current.splice(insertIdx, 0, marker.getLatLng());
+          inserted = true;
+          refreshPolygonShape();
+        });
+        marker.on("drag", () => {
+          if (!inserted) return;
+          polygonLatLngsRef.current[insertIdx] = marker.getLatLng();
+          refreshPolygonShape();
+        });
+        marker.on("dragend", () => {
+          if (!inserted) return;
+          rebuildVertices();
+          rebuildMidpoints();
+          notifyPolygon();
+        });
+        // Simple click also inserts (kept for accessibility / non-drag taps)
         marker.on("click", () => {
-          // Insert new vertex at index i+1
-          polygonLatLngsRef.current.splice(i + 1, 0, mid);
+          if (inserted) return;
+          polygonLatLngsRef.current.splice(insertIdx, 0, mid);
           rebuildVertices();
           refreshPolygonShape();
           rebuildMidpoints();
@@ -301,6 +330,7 @@ export function ContourMap({
 
     const addPolygonVertex = (latlng: L.LatLng) => {
       polygonLatLngsRef.current.push(latlng);
+      setPolygonInProgressCount(polygonLatLngsRef.current.length);
       // Light "in progress" preview marker
       const tmp = L.circleMarker(latlng, {
         radius: 5,
@@ -327,12 +357,14 @@ export function ContourMap({
         resetPolygon();
         drawingPolygonRef.current = false;
         setDrawingPolygon(false);
+        setPolygonInProgressCount(0);
         map.getContainer().style.cursor = "";
         map.doubleClickZoom.enable();
         return;
       }
       drawingPolygonRef.current = false;
       setDrawingPolygon(false);
+      setPolygonInProgressCount(0);
       map.getContainer().style.cursor = "";
       map.doubleClickZoom.enable();
       // Clear preview markers (we reused midpoints array as scratch)
@@ -352,6 +384,7 @@ export function ContourMap({
       setHasPolygon(true);
       notifyPolygon();
     };
+    (finishPolygonRef as React.MutableRefObject<(() => void) | null>).current = finishPolygon;
 
     // ========================================================================
     // RECTANGLE DRAWING (mouse + touch)
@@ -575,8 +608,10 @@ export function ContourMap({
             map.doubleClickZoom.disable();
             // Reset previous polygon if any
             resetPolygon();
+            setPolygonInProgressCount(0);
           } else {
             map.doubleClickZoom.enable();
+            setPolygonInProgressCount(0);
           }
         });
       }
@@ -899,9 +934,33 @@ export function ContourMap({
         </div>
       )}
       {drawingPolygon && (
-        <div className="absolute top-2 left-1/2 -translate-x-1/2 z-[1000] bg-card text-foreground text-xs sm:text-sm px-3 py-1.5 rounded-md shadow-md border border-border max-w-[90vw] text-center">
-          Cliquez pour ajouter un sommet — double-clic ou appui long pour terminer
-        </div>
+        <>
+          <div className="absolute top-2 left-1/2 -translate-x-1/2 z-[1000] bg-card text-foreground text-xs sm:text-sm px-3 py-1.5 rounded-md shadow-md border border-border max-w-[90vw] text-center">
+            Cliquez pour ajouter un sommet ({polygonInProgressCount}) — minimum 3
+          </div>
+          <div className="absolute top-12 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-2">
+            <button
+              onClick={() => finishPolygonRef.current?.()}
+              disabled={polygonInProgressCount < 3}
+              className="bg-primary text-primary-foreground text-xs sm:text-sm px-4 py-2 rounded-md shadow-md font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
+            >
+              ✓ Valider la zone
+            </button>
+            <button
+              onClick={() => {
+                resetPolygonRef.current?.();
+                setPolygonInProgressCount(0);
+                setDrawingPolygon(false);
+                drawingPolygonRef.current = false;
+                leafletMapRef.current?.getContainer().style.setProperty("cursor", "");
+                leafletMapRef.current?.doubleClickZoom.enable();
+              }}
+              className="bg-card text-foreground text-xs sm:text-sm px-3 py-2 rounded-md shadow-md border border-border hover:bg-muted transition-colors"
+            >
+              Annuler
+            </button>
+          </div>
+        </>
       )}
       {drawingProfile && (
         <div className="absolute top-2 left-1/2 -translate-x-1/2 z-[1000] bg-card text-foreground text-xs sm:text-sm px-3 py-1.5 rounded-md shadow-md border border-border max-w-[90vw] text-center">
