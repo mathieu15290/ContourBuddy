@@ -330,6 +330,7 @@ export function ContourMap({
 
     const addPolygonVertex = (latlng: L.LatLng) => {
       polygonLatLngsRef.current.push(latlng);
+      setPolygonInProgressCount(polygonLatLngsRef.current.length);
       // Light "in progress" preview marker
       const tmp = L.circleMarker(latlng, {
         radius: 5,
@@ -356,12 +357,14 @@ export function ContourMap({
         resetPolygon();
         drawingPolygonRef.current = false;
         setDrawingPolygon(false);
+        setPolygonInProgressCount(0);
         map.getContainer().style.cursor = "";
         map.doubleClickZoom.enable();
         return;
       }
       drawingPolygonRef.current = false;
       setDrawingPolygon(false);
+      setPolygonInProgressCount(0);
       map.getContainer().style.cursor = "";
       map.doubleClickZoom.enable();
       // Clear preview markers (we reused midpoints array as scratch)
