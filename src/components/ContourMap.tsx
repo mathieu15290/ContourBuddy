@@ -9,6 +9,7 @@ import {
   type LonLat,
   type PolygonSelection,
 } from "@/lib/polygon-utils";
+import { renderTerrainCanvas, type TerrainGrid } from "@/lib/terrain";
 
 interface HighlightPoint {
   lat: number;
