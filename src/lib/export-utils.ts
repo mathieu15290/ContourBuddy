@@ -4,6 +4,7 @@
 
 import { saveAs } from "file-saver";
 import type { ContourResult } from "./contours";
+import { clipPolylineToPolygon, type PolygonSelection } from "./polygon-utils";
 
 /**
  * Export as GeoJSON
