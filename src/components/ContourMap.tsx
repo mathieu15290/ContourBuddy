@@ -228,15 +228,42 @@ export function ContourMap({
     const rebuildMidpoints = () => {
       clearMidpoints();
       const pts = polygonLatLngsRef.current;
-      if (pts.length < 3) return;
+      if (pts.length < 2) return;
       for (let i = 0; i < pts.length; i++) {
         const a = pts[i];
         const b = pts[(i + 1) % pts.length];
         const mid = L.latLng((a.lat + b.lat) / 2, (a.lng + b.lng) / 2);
-        const marker = L.marker(mid, { icon: midpointIcon, interactive: true, keyboard: false });
+        const insertIdx = i + 1;
+        const marker = L.marker(mid, {
+          icon: midpointIcon,
+          draggable: true,
+          autoPan: true,
+          keyboard: false,
+        });
+        let inserted = false;
+        // PermaBuddy-style stretch: dragging a midpoint inserts a new
+        // vertex at insertIdx, then live-updates it as the pointer moves.
+        marker.on("dragstart", () => {
+          if (inserted) return;
+          polygonLatLngsRef.current.splice(insertIdx, 0, marker.getLatLng());
+          inserted = true;
+          refreshPolygonShape();
+        });
+        marker.on("drag", () => {
+          if (!inserted) return;
+          polygonLatLngsRef.current[insertIdx] = marker.getLatLng();
+          refreshPolygonShape();
+        });
+        marker.on("dragend", () => {
+          if (!inserted) return;
+          rebuildVertices();
+          rebuildMidpoints();
+          notifyPolygon();
+        });
+        // Simple click also inserts (kept for accessibility / non-drag taps)
         marker.on("click", () => {
-          // Insert new vertex at index i+1
-          polygonLatLngsRef.current.splice(i + 1, 0, mid);
+          if (inserted) return;
+          polygonLatLngsRef.current.splice(insertIdx, 0, mid);
           rebuildVertices();
           refreshPolygonShape();
           rebuildMidpoints();
