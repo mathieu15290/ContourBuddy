@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Layers, Eye, EyeOff, ChevronRight, ChevronLeft } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import type { LayerState, LayerId } from "@/lib/layers";
+import { SLOPE_LEGEND, ASPECT_LEGEND } from "@/lib/terrain";
 import { cn } from "@/lib/utils";
 
 interface Props {
