@@ -4,6 +4,7 @@
 
 import { saveAs } from "file-saver";
 import type { ContourResult } from "./contours";
+import { clipPolylineToPolygon, type PolygonSelection } from "./polygon-utils";
 
 /**
  * Export as GeoJSON
@@ -102,9 +103,20 @@ export async function exportPNG(
  */
 export function exportSVG(
   contours: ContourResult,
-  filename: string = "courbes-niveaux"
+  filename: string = "courbes-niveaux",
+  polygon?: PolygonSelection | null
 ) {
   if (!contours.lines.length) return;
+
+  // Optionally clip every contour line to the user polygon (intersection)
+  const sourceLines = polygon && polygon.coordinates.length >= 3
+    ? contours.lines.flatMap((line) => {
+        const segs = clipPolylineToPolygon(line.coordinates, polygon.coordinates);
+        return segs.map((coordinates) => ({ ...line, coordinates }));
+      })
+    : contours.lines;
+
+  if (!sourceLines.length) return;
 
   // Web Mercator projection (lat clamped). Returns unscaled x/y in radians-ish.
   const project = (lon: number, lat: number): [number, number] => {
@@ -114,18 +126,27 @@ export function exportSVG(
     return [x, y];
   };
 
-  // Bounding box in projected space
+  // Bounding box in projected space — based on polygon if present, else on lines
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  const projected: { line: typeof contours.lines[number]; pts: [number, number][] }[] = [];
-  for (const line of contours.lines) {
+  const accBbox = ([x, y]: [number, number]) => {
+    if (x < minX) minX = x;
+    if (y < minY) minY = y;
+    if (x > maxX) maxX = x;
+    if (y > maxY) maxY = y;
+  };
+
+  const projected: { line: typeof sourceLines[number]; pts: [number, number][] }[] = [];
+  for (const line of sourceLines) {
     const pts = line.coordinates.map(([lon, lat]) => project(lon, lat));
-    for (const [x, y] of pts) {
-      if (x < minX) minX = x;
-      if (y < minY) minY = y;
-      if (x > maxX) maxX = x;
-      if (y > maxY) maxY = y;
-    }
     projected.push({ line, pts });
+  }
+
+  let projectedPolygon: [number, number][] | null = null;
+  if (polygon && polygon.coordinates.length >= 3) {
+    projectedPolygon = polygon.coordinates.map(([lon, lat]) => project(lon, lat));
+    projectedPolygon.forEach(accBbox);
+  } else {
+    for (const { pts } of projected) pts.forEach(accBbox);
   }
 
   const W = 2000;
@@ -177,6 +198,14 @@ export function exportSVG(
     labels += `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" font-family="Helvetica, Arial, sans-serif" font-size="11" fill="#3a2410" text-anchor="middle" paint-order="stroke" stroke="#fff8ee" stroke-width="2.5">${elev}</text>\n`;
   }
 
+  // Polygon outline overlay (drawn above contours)
+  let polygonLayer = "";
+  if (projectedPolygon) {
+    const svgPoly = projectedPolygon.map(toSvg);
+    const ptsAttr = svgPoly.map(([x, y]) => `${x.toFixed(2)},${y.toFixed(2)}`).join(" ");
+    polygonLayer = `<polygon points="${ptsAttr}" fill="none" stroke="hsl(152,45%,38%)" stroke-width="2" stroke-dasharray="6 4" stroke-linejoin="round"/>`;
+  }
+
   const svg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">
 <rect width="100%" height="100%" fill="#fff8ee"/>
@@ -184,6 +213,7 @@ export function exportSVG(
 ${paths}</g>
 <g>
 ${labels}</g>
+${polygonLayer}
 </svg>`;
 
   const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });

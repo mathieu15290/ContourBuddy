@@ -168,7 +168,7 @@ const Index = () => {
     onExportGeoJSON: () => contours && exportGeoJSON(contours),
     onExportDXF: () => contours && exportDXF(contours),
     onExportKML: () => contours && exportKML(contours),
-    onExportSVG: () => contours && exportSVG(contours),
+    onExportSVG: () => contours && exportSVG(contours, "courbes-niveaux", polygon),
     onExportPNG: handleExportPNG,
   };
 
