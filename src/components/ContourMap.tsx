@@ -807,6 +807,24 @@ export function ContourMap({
         map.removeLayer(tg);
       }
     }
+
+    // Slope + aspect raster overlays
+    const applyOverlay = (
+      id: "slope" | "aspect",
+      ref: React.MutableRefObject<L.ImageOverlay | null>
+    ) => {
+      const state = layers.find((l) => l.id === id);
+      const ov = ref.current;
+      if (!ov || !state) return;
+      if (state.visible) {
+        if (!map.hasLayer(ov)) ov.addTo(map);
+        ov.setOpacity(state.opacity);
+      } else if (map.hasLayer(ov)) {
+        map.removeLayer(ov);
+      }
+    };
+    applyOverlay("slope", slopeOverlayRef);
+    applyOverlay("aspect", aspectOverlayRef);
   }, [layers, contours, importedTrack]);
 
   // Selection ↔ viewport coherence watchdog
