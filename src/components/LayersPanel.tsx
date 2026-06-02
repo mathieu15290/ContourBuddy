@@ -66,6 +66,32 @@ export function LayersPanel({ layers, onChange }: Props) {
                     />
                   </div>
                 )}
+                {layer.visible && layer.id === "slope" && (
+                  <ul className="mt-2 pl-1 space-y-0.5">
+                    {SLOPE_LEGEND.map((row) => (
+                      <li key={row.label} className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                        <span
+                          className="inline-block w-3 h-3 rounded-sm border border-border/50 shrink-0"
+                          style={{ background: row.color }}
+                        />
+                        <span className="truncate">{row.label}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {layer.visible && layer.id === "aspect" && (
+                  <ul className="mt-2 pl-1 flex flex-wrap gap-x-3 gap-y-1">
+                    {ASPECT_LEGEND.map((row) => (
+                      <li key={row.label} className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                        <span
+                          className="inline-block w-3 h-3 rounded-full border border-border/50"
+                          style={{ background: row.color }}
+                        />
+                        <span>{row.label}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </li>
             ))}
           </ul>
