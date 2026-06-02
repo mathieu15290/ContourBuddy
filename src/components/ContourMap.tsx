@@ -32,6 +32,7 @@ interface Props {
   importedTrack?: { points: [number, number][]; name?: string } | null;
   layers: LayerState[];
   onPolygonChanged?: (polygon: PolygonSelection | null) => void;
+  terrain?: TerrainGrid | null;
 }
 
 const POLY_COLOR = "hsl(152, 45%, 28%)";
