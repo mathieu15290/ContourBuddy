@@ -123,8 +123,10 @@ export function ElevationProfile({ data, onClose, onHoverPoint }: Props) {
           <span>{formatDist(stats.totalDist)}</span>
           <span>D+ {Math.round(stats.gain)}m</span>
           <span>D- {Math.round(stats.loss)}m</span>
-          <span className="hidden sm:inline">Min {Math.round(stats.min)}m</span>
-          <span className="hidden sm:inline">Max {Math.round(stats.max)}m</span>
+          <span>Pmoy {stats.avgSlope.toFixed(1)}%</span>
+          <span className="hidden sm:inline">Pmax {stats.maxSlope.toFixed(1)}%</span>
+          <span className="hidden sm:inline">Min {Math.round(stats.min)}m ({formatDist(stats.minPoint.distance)})</span>
+          <span className="hidden sm:inline">Max {Math.round(stats.max)}m ({formatDist(stats.maxPoint.distance)})</span>
         </div>
         <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={onClose}>
           <X className="h-4 w-4" />
