@@ -28,12 +28,25 @@ export function ElevationProfile({ data, onClose, onHoverPoint }: Props) {
     const max = Math.max(...elevs);
     const totalDist = data[data.length - 1].distance;
     let gain = 0, loss = 0;
+    let slopeSum = 0;
+    let maxSlope = 0;
+    let slopeCount = 0;
     for (let i = 1; i < data.length; i++) {
       const diff = data[i].elevation - data[i - 1].elevation;
+      const dist = data[i].distance - data[i - 1].distance;
+      if (dist > 0) {
+        const slope = (Math.abs(diff) / dist) * 100;
+        slopeSum += slope;
+        slopeCount++;
+        if (slope > maxSlope) maxSlope = slope;
+      }
       if (diff > 0) gain += diff;
       else loss += Math.abs(diff);
     }
-    return { min, max, totalDist, gain, loss };
+    const avgSlope = slopeCount > 0 ? slopeSum / slopeCount : 0;
+    const maxPoint = data.find((p) => p.elevation === max)!;
+    const minPoint = data.find((p) => p.elevation === min)!;
+    return { min, max, totalDist, gain, loss, avgSlope, maxSlope, maxPoint, minPoint };
   }, [data]);
 
   if (!stats) return null;
@@ -110,8 +123,10 @@ export function ElevationProfile({ data, onClose, onHoverPoint }: Props) {
           <span>{formatDist(stats.totalDist)}</span>
           <span>D+ {Math.round(stats.gain)}m</span>
           <span>D- {Math.round(stats.loss)}m</span>
-          <span className="hidden sm:inline">Min {Math.round(stats.min)}m</span>
-          <span className="hidden sm:inline">Max {Math.round(stats.max)}m</span>
+          <span>Pmoy {stats.avgSlope.toFixed(1)}%</span>
+          <span className="hidden sm:inline">Pmax {stats.maxSlope.toFixed(1)}%</span>
+          <span className="hidden sm:inline">Min {Math.round(stats.min)}m ({formatDist(stats.minPoint.distance)})</span>
+          <span className="hidden sm:inline">Max {Math.round(stats.max)}m ({formatDist(stats.maxPoint.distance)})</span>
         </div>
         <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={onClose}>
           <X className="h-4 w-4" />
