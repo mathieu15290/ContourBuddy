@@ -970,25 +970,25 @@ export function ContourMap({
       {hasPolygon && (
         <button
           onClick={handleResetPolygon}
-          className="absolute top-2 right-2 z-[1000] bg-card text-foreground text-xs px-3 py-1.5 rounded-md shadow-md border border-border hover:bg-accent hover:text-accent-foreground transition-colors"
+          className="absolute top-2 right-2 z-[1000] bg-card text-foreground text-xs px-3 min-h-[44px] rounded-md shadow-md border border-border hover:bg-accent hover:text-accent-foreground transition-colors"
         >
           Réinitialiser le polygone
         </button>
       )}
       {polygonInfo && (
-        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-[1000] bg-card text-foreground text-xs px-2.5 py-1.5 rounded-md shadow-md border border-border">
+        <div className="absolute left-1/2 -translate-x-1/2 z-[1200] bg-card text-foreground text-xs px-2.5 py-1.5 rounded-md shadow-md border border-border bottom-[calc(env(safe-area-inset-bottom)+4.5rem)] md:bottom-2">
           Polygone : {polygonInfo.coordinates.length} sommets — {polygonInfo.areaKm2.toFixed(2)} km²
         </div>
       )}
       {selectionInfo && !polygonInfo && (
-        <div className="absolute bottom-2 right-2 z-[1000] bg-card text-foreground text-xs px-2.5 py-1.5 rounded-md shadow-md border border-border">
+        <div className="absolute right-2 z-[1200] bg-card text-foreground text-xs px-2.5 py-1.5 rounded-md shadow-md border border-border bottom-[calc(env(safe-area-inset-bottom)+4.5rem)] md:bottom-2">
           Zone : {formatMeters(selectionInfo.widthM)} × {formatMeters(selectionInfo.heightM)}
         </div>
       )}
       {selectionOffscreen && selectedBounds && !polygonInfo && (
         <button
           onClick={recenterOnSelection}
-          className="absolute bottom-12 right-2 z-[1000] bg-card text-foreground text-xs px-3 py-1.5 rounded-md shadow-md border border-border hover:bg-accent hover:text-accent-foreground transition-colors"
+          className="absolute right-2 z-[1200] bg-card text-foreground text-xs px-3 min-h-[44px] rounded-md shadow-md border border-border hover:bg-accent hover:text-accent-foreground transition-colors bottom-[calc(env(safe-area-inset-bottom)+7.5rem)] md:bottom-12"
         >
           Recadrer sur la zone
         </button>

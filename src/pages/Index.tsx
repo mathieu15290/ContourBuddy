@@ -13,8 +13,21 @@ import type { PolygonSelection } from "@/lib/polygon-utils";
 import { computeTerrain, type TerrainGrid } from "@/lib/terrain";
 import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "@/hooks/use-theme";
-import { ChevronUp, ChevronDown, Moon, Sun, Upload } from "lucide-react";
+import { Moon, Sun, Upload, Settings2, MoreVertical, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import logo from "@/assets/logo.png";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "@/components/ui/drawer";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 type Bounds = { south: number; north: number; west: number; east: number };
 
@@ -33,6 +46,7 @@ const Index = () => {
   const [profileLoading, setProfileLoading] = useState(false);
   const [hoveredProfilePoint, setHoveredProfilePoint] = useState<ProfilePoint | null>(null);
   const [mobilePanel, setMobilePanel] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [importedTrack, setImportedTrack] = useState<{ points: TrackPoint[]; name: string } | null>(null);
   const [layers, setLayers] = useState<LayerState[]>(DEFAULT_LAYERS);
   const [polygon, setPolygon] = useState<PolygonSelection | null>(null);
@@ -175,17 +189,18 @@ const Index = () => {
   return (
     <div className="flex flex-col h-screen bg-background">
       {/* Header */}
-      <header className="border-b border-border bg-card px-3 sm:px-4 py-2 sm:py-3 flex items-center gap-2 sm:gap-3 shrink-0">
+      <header className="border-b border-border bg-card px-2 sm:px-4 py-2 sm:py-3 flex items-center gap-2 sm:gap-3 shrink-0 safe-top safe-x">
         <div className="flex items-center gap-2 shrink-0">
           <img src={logo} alt="Logo" className="h-7 w-7 sm:h-8 sm:w-8" />
-          <h1 className="text-base sm:text-lg font-bold text-foreground tracking-tight">
-            ContourBuddyApp
+          <h1 className="hidden xs:block sm:block text-base sm:text-lg font-bold text-foreground tracking-tight">
+            <span className="hidden sm:inline">ContourBuddyApp</span>
+            <span className="sm:hidden">CB</span>
           </h1>
         </div>
-        <div className="flex-1 max-w-lg ml-2 sm:ml-4">
+        <div className="flex-1 max-w-lg ml-1 sm:ml-4 min-w-0">
           <AddressSearch onSelect={handleAddressSelect} />
         </div>
-        <div className="flex items-center gap-2 ml-auto">
+        <div className="flex items-center gap-1 sm:gap-2 ml-auto shrink-0">
           <input
             ref={fileInputRef}
             type="file"
@@ -197,38 +212,78 @@ const Index = () => {
               e.target.value = "";
             }}
           />
+          {/* Desktop / tablet actions */}
           <button
             onClick={() => fileInputRef.current?.click()}
             title="Importer une trace GPX ou KML"
-            className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-md border border-border bg-background hover:bg-muted text-foreground text-xs sm:text-sm transition-colors"
+            className="hidden sm:inline-flex items-center justify-center gap-1.5 min-h-[44px] min-w-[44px] px-3 py-1.5 rounded-md border border-border bg-background hover:bg-muted text-foreground text-sm transition-colors"
           >
             <Upload className="h-4 w-4" />
-            <span className="hidden sm:inline">Importer GPX/KML</span>
+            <span className="hidden md:inline">Importer GPX/KML</span>
           </button>
           <p className="hidden lg:block text-xs text-muted-foreground">
             Données © IGN – RGE ALTI®
           </p>
-          <button onClick={toggleTheme} className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground">
-            {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          <button
+            onClick={toggleTheme}
+            title={dark ? "Thème clair" : "Thème sombre"}
+            className="hidden sm:inline-flex items-center justify-center min-h-[44px] min-w-[44px] rounded-md hover:bg-muted transition-colors text-muted-foreground"
+          >
+            {dark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
           </button>
+
+          {/* Mobile: actions secondaires regroupées */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className="sm:hidden inline-flex items-center justify-center min-h-[44px] min-w-[44px] rounded-md hover:bg-muted text-foreground"
+                aria-label="Plus d'actions"
+              >
+                <MoreVertical className="h-5 w-5" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem onClick={() => fileInputRef.current?.click()} className="min-h-[44px] text-sm">
+                <Upload className="h-4 w-4 mr-2" /> Importer GPX/KML
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={toggleTheme} className="min-h-[44px] text-sm">
+                {dark ? <Sun className="h-4 w-4 mr-2" /> : <Moon className="h-4 w-4 mr-2" />}
+                {dark ? "Thème clair" : "Thème sombre"}
+              </DropdownMenuItem>
+              <DropdownMenuItem disabled className="text-xs text-muted-foreground">
+                Données © IGN – RGE ALTI®
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </header>
 
       {/* Main */}
       <div className="flex flex-1 overflow-hidden relative">
-        {/* Desktop Sidebar */}
-        <aside className="w-80 border-r border-border bg-card overflow-y-auto p-4 shrink-0 hidden md:block">
-          <ControlPanel {...controlPanelProps} />
-          {!bounds && !contours && (
-            <div className="mt-6 text-center text-sm text-muted-foreground px-2">
-              <p className="mb-2">👆 Utilisez l'outil rectangle sur la carte pour sélectionner une zone</p>
-              <p>Puis cliquez sur "Générer les courbes" pour obtenir les courbes de niveaux.</p>
-            </div>
-          )}
-        </aside>
+        {/* Desktop / Tablet Sidebar (collapsible on tablet) */}
+        {!sidebarCollapsed && (
+          <aside className="w-80 border-r border-border bg-card overflow-y-auto p-4 shrink-0 hidden md:block safe-x">
+            <ControlPanel {...controlPanelProps} />
+            {!bounds && !contours && (
+              <div className="mt-6 text-center text-sm text-muted-foreground px-2">
+                <p className="mb-2">👆 Utilisez l'outil rectangle sur la carte pour sélectionner une zone</p>
+                <p>Puis cliquez sur "Générer les courbes" pour obtenir les courbes de niveaux.</p>
+              </div>
+            )}
+          </aside>
+        )}
 
         {/* Map */}
-        <main className="flex-1 relative">
+        <main className="flex-1 relative" style={{ overscrollBehavior: "none" }}>
+          {/* Tablet+ : bouton repli/dépli sidebar */}
+          <button
+            onClick={() => setSidebarCollapsed((v) => !v)}
+            title={sidebarCollapsed ? "Afficher le panneau" : "Masquer le panneau"}
+            className="hidden md:inline-flex items-center justify-center absolute top-2 left-2 z-[1000] min-h-[44px] min-w-[44px] rounded-md bg-card border border-border shadow-md text-foreground hover:bg-muted transition-colors"
+          >
+            {sidebarCollapsed ? <PanelLeftOpen className="h-5 w-5" /> : <PanelLeftClose className="h-5 w-5" />}
+          </button>
+
           <ContourMap
             center={center}
             zoom={zoom}
@@ -258,21 +313,34 @@ const Index = () => {
             <ElevationProfile data={profileData} onClose={() => { setProfileData(null); setImportedTrack(null); }} onHoverPoint={setHoveredProfilePoint} />
           )}
 
-          {/* Mobile bottom sheet toggle */}
-          <div className="md:hidden absolute bottom-3 left-3 right-3 z-[1000] flex flex-col gap-2">
-            {mobilePanel && (
-              <div className="bg-card border border-border rounded-xl shadow-lg p-3 max-h-[60vh] overflow-y-auto">
-                <ControlPanel {...controlPanelProps} />
-              </div>
-            )}
-            <button
-              onClick={() => setMobilePanel((v) => !v)}
-              className="self-center flex items-center gap-1.5 bg-primary text-primary-foreground px-4 py-2 rounded-full shadow-lg text-sm font-medium"
-            >
-              <img src={logo} alt="" className="h-4 w-4" />
-              {mobilePanel ? "Fermer" : bounds ? "Paramètres" : "Sélectionnez une zone"}
-              {mobilePanel ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
-            </button>
+          {/* Mobile : Drawer + FAB Outils */}
+          <div className="md:hidden absolute left-0 right-0 bottom-0 z-[1100] flex justify-center pointer-events-none safe-bottom">
+            <div className="pointer-events-auto pb-3">
+              <Drawer open={mobilePanel} onOpenChange={setMobilePanel}>
+                <DrawerTrigger asChild>
+                  <button
+                    className="inline-flex items-center gap-2 min-h-[44px] px-5 py-2.5 rounded-full bg-primary text-primary-foreground shadow-lg text-sm font-medium active:scale-95 transition-transform"
+                    aria-label="Ouvrir les outils"
+                  >
+                    <Settings2 className="h-4 w-4" />
+                    {bounds ? "Outils" : "Sélectionnez une zone"}
+                  </button>
+                </DrawerTrigger>
+                <DrawerContent className="max-h-[85vh]">
+                  <DrawerHeader className="text-left">
+                    <DrawerTitle>Outils & paramètres</DrawerTitle>
+                  </DrawerHeader>
+                  <div className="px-4 pb-6 overflow-y-auto safe-bottom">
+                    <ControlPanel {...controlPanelProps} />
+                    {!bounds && !contours && (
+                      <p className="mt-4 text-xs text-muted-foreground text-center">
+                        Utilisez l'outil rectangle ou polygone sur la carte pour sélectionner une zone.
+                      </p>
+                    )}
+                  </div>
+                </DrawerContent>
+              </Drawer>
+            </div>
           </div>
         </main>
       </div>

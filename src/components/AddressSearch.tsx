@@ -70,11 +70,11 @@ export function AddressSearch({ onSelect }: Props) {
       </div>
 
       {open && results.length > 0 && (
-        <div className="absolute z-[2000] mt-1 w-full rounded-md border border-border bg-popover shadow-lg max-h-[60vh] overflow-y-auto">
+        <div className="absolute z-[2000] mt-1 left-0 right-0 w-full sm:w-auto rounded-md border border-border bg-popover shadow-lg max-h-[60vh] overflow-y-auto">
           {results.map((r, i) => (
             <button
               key={i}
-              className="flex w-full items-center gap-2 px-3 py-2.5 text-sm text-popover-foreground hover:bg-muted transition-colors first:rounded-t-md last:rounded-b-md"
+              className="flex w-full items-center gap-2 px-3 min-h-[48px] py-3 text-sm text-popover-foreground hover:bg-muted active:bg-muted transition-colors first:rounded-t-md last:rounded-b-md text-left"
               onMouseDown={(e) => {
                 e.preventDefault();
                 setQuery(r.label);
