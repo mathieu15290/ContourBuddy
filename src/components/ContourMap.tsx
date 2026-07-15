@@ -164,25 +164,14 @@ export function ContourMap({
       zoomControl: true,
     });
 
-    const planLayer = L.tileLayer(
-      "https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}",
-      { maxZoom: 19, attribution: "© IGN" }
-    );
-
-    const satelliteLayer = L.tileLayer(
-      "https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&STYLE=normal&FORMAT=image/jpeg&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}",
-      { maxZoom: 19, attribution: "© IGN" }
-    );
-
-    const cadastreLayer = L.tileLayer(
-      "https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=CADASTRALPARCELS.PARCELLAIRE_EXPRESS&STYLE=PCI vecteur&FORMAT=image/png&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}",
-      { maxZoom: 19, attribution: "© IGN", opacity: 0.7 }
-    );
-
-    planLayer.addTo(map);
-    satelliteLayer.addTo(map);
-    cadastreLayer.addTo(map);
-    baseLayersRef.current = { plan: planLayer, satellite: satelliteLayer, cadastre: cadastreLayer };
+    // Instancie toutes les couches externes déclarées; la synchro visibilité/opacité
+    // est gérée par un useEffect séparé (voir plus bas).
+    const built: Partial<Record<LayerId, L.Layer>> = {};
+    (Object.keys(EXTERNAL_LAYER_CONFIGS) as LayerId[]).forEach((id) => {
+      const cfg = EXTERNAL_LAYER_CONFIGS[id];
+      if (cfg) built[id] = buildExternalLayer(cfg);
+    });
+    externalLayersRef.current = built;
 
     // Custom draw buttons
     const DrawControl = L.Control.extend({
