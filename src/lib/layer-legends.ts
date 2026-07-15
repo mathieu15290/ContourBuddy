@@ -93,8 +93,10 @@ export const LAYER_LEGENDS: Partial<Record<LayerId, LegendDef>> = {
     title: "ZNIEFF (types 1 & 2)",
     source: "INPN / MNHN — Patrinat",
     entries: [
-      { color: "#f2b134", label: "ZNIEFF type 1 — secteurs de forte valeur biologique (espèces & habitats déterminants)" },
-      { color: "#5a8f3e", label: "ZNIEFF type 2 — grands ensembles naturels riches et peu modifiés" },
+      { color: "#5aae4a", label: "ZNIEFF Type 1 (terrestre)" },
+      { color: "#1f5a2a", label: "ZNIEFF Type 2 (terrestre)" },
+      { color: "#3aa0d9", label: "ZNIEFF Type 1 (marine)" },
+      { color: "#1a5a8a", label: "ZNIEFF Type 2 (marine)" },
     ],
   },
 
