@@ -13,15 +13,8 @@ import type { PolygonSelection } from "@/lib/polygon-utils";
 import { computeTerrain, type TerrainGrid } from "@/lib/terrain";
 import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "@/hooks/use-theme";
-import { Moon, Sun, Upload, Settings2, MoreVertical, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { Moon, Sun, Upload, MoreVertical, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import logo from "@/assets/logo.png";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerTrigger,
-} from "@/components/ui/drawer";
 import {
   DropdownMenu,
   DropdownMenuContent,
