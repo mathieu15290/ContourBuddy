@@ -77,27 +77,33 @@ export const LAYER_LEGENDS: Partial<Record<LayerId, LegendDef>> = {
 
   natura2000: {
     title: "Réseau Natura 2000",
-    source: "MNHN — INPN Patrinat",
+    source: "MNHN — Patrinat (diffusé via IGN Géoplateforme)",
     entries: [
       { color: "#2f8a3e", label: "ZSC — Zone Spéciale de Conservation (Directive Habitats)" },
+      { color: "#8fc79a", label: "SIC / pSIC — Site d'Importance Communautaire" },
       { color: "#c14b2c", label: "ZPS — Zone de Protection Spéciale (Directive Oiseaux)" },
+      { color: "#4a6b8a", label: "Habitats marins Natura 2000" },
     ],
     footer: {
-      label: "Légende officielle INPN",
-      href: "https://inpn.mnhn.fr/programme/natura2000/presentation/objectifs",
+      label: "Réseau Natura 2000 — Ministère de la Transition écologique",
+      href: "https://www.ecologie.gouv.fr/politiques-publiques/reseau-europeen-natura-2000",
     },
   },
 
   znieff: {
     title: "ZNIEFF — Inventaire du patrimoine naturel",
-    source: "MNHN — INPN",
+    source: "MNHN — Patrinat (diffusé via IGN Géoplateforme)",
     entries: [
-      { color: "#f2b134", label: "ZNIEFF de type 1 (secteurs à forte valeur biologique)" },
-      { color: "#f7d894", label: "ZNIEFF de type 2 (grands ensembles naturels)" },
+      { color: "#e94e1b", label: "ZNIEFF type 1 — contour", pattern: "line" },
+      { color: "#f2b134", label: "ZNIEFF type 1 — secteurs à forte valeur biologique (espèces & habitats déterminants)" },
+      { color: "#b45f06", label: "ZNIEFF type 2 — contour", pattern: "line" },
+      { color: "#f7d894", label: "ZNIEFF type 2 — grands ensembles naturels cohérents" },
+      { color: "#5a8f3e", label: "ZNIEFF marine type 1" },
+      { color: "#a7c98c", label: "ZNIEFF marine type 2" },
     ],
     footer: {
-      label: "Méthodologie ZNIEFF (INPN)",
-      href: "https://inpn.mnhn.fr/programme/inventaire-znieff/presentation",
+      label: "Définition & méthodologie ZNIEFF (DREAL)",
+      href: "https://www.centre-val-de-loire.developpement-durable.gouv.fr/znieff-definition-et-methodologie-a4279.html",
     },
   },
 
