@@ -105,15 +105,21 @@ export const EXTERNAL_LAYER_CONFIGS: Partial<Record<LayerId, ExternalLayerConfig
   plan: wmts("GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2"),
   satellite: wmts("ORTHOIMAGERY.ORTHOPHOTOS", { format: "image/jpeg" }),
   cadastre: wmts("CADASTRALPARCELS.PARCELLAIRE_EXPRESS", { style: "PCI vecteur" }),
-  lidar: wmts("IGNF_LIDAR-HD_MNT_ELEVATION.ELEVATIONGRIDCOVERAGE.SHADOW", { format: "image/jpeg" }),
-  hydro: wmts("HYDROGRAPHY.HYDROGRAPHY"),
+  lidar: wmts("IGNF_LIDAR-HD_MNT_ELEVATION.ELEVATIONGRIDCOVERAGE.SHADOW", { matrixSet: "PM_0_18", maxZoom: 18 }),
+  hydro: wmts("HYDROGRAPHY.HYDROGRAPHY", { matrixSet: "PM_6_18", maxZoom: 18 }),
   natura2000: {
     kind: "group",
-    children: [wmts("Patrinat_SIC"), wmts("Patrinat_ZPS")],
+    children: [
+      wmts("Patrinat_SIC", { matrixSet: "PM_6_16", maxZoom: 16 }),
+      wmts("Patrinat_ZPS", { matrixSet: "PM_6_16", maxZoom: 16 }),
+    ],
   },
   znieff: {
     kind: "group",
-    children: [wmts("Patrinat_ZNIEFF1"), wmts("Patrinat_ZNIEFF2")],
+    children: [
+      wmts("Patrinat_ZNIEFF1", { matrixSet: "PM_6_16", maxZoom: 16 }),
+      wmts("Patrinat_ZNIEFF2", { matrixSet: "PM_6_16", maxZoom: 16 }),
+    ],
   },
   foret: {
     kind: "wms",
