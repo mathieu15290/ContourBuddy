@@ -95,8 +95,6 @@ export const LAYER_LEGENDS: Partial<Record<LayerId, LegendDef>> = {
     entries: [
       { color: "#5aae4a", label: "ZNIEFF Type 1 (terrestre)" },
       { color: "#1f5a2a", label: "ZNIEFF Type 2 (terrestre)" },
-      { color: "#3aa0d9", label: "ZNIEFF Type 1 (marine)" },
-      { color: "#1a5a8a", label: "ZNIEFF Type 2 (marine)" },
     ],
   },
 
