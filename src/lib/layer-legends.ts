@@ -146,18 +146,56 @@ export const LAYER_LEGENDS: Partial<Record<LayerId, LegendDef>> = {
   },
 
   geologie: {
-    title: "Carte géologique 1/50 000",
+    title: "Carte géologique BRGM — 1/1 000 000 à 1/50 000",
     source: "BRGM — InfoTerre",
     entries: [
-      { color: "#f4d35e", label: "Formations sédimentaires — sables & alluvions" },
-      { color: "#c9a664", label: "Roches sédimentaires — calcaires" },
-      { color: "#8b6a4a", label: "Roches sédimentaires — argiles & marnes" },
-      { color: "#b0413e", label: "Roches magmatiques — granites" },
-      { color: "#5a3a5a", label: "Roches volcaniques — basaltes" },
-      { color: "#4a6b8a", label: "Roches métamorphiques — schistes / gneiss" },
+      // Quaternaire & Néogène
+      { color: "#f5e6a3", label: "Holocène — alluvions récentes, tourbes" },
+      { color: "#e6d28a", label: "Pléistocène — alluvions anciennes, loess, moraines" },
+      { color: "#d4c078", label: "Pliocène — sables, argiles, conglomérats" },
+      { color: "#b8c47a", label: "Miocène — molasses, calcaires lacustres" },
+      // Paléogène
+      { color: "#c4d9a8", label: "Oligocène — calcaires, marnes, sables" },
+      { color: "#a8d18a", label: "Éocène — calcaires grossiers, gypses, lignites" },
+      { color: "#8fc06a", label: "Paléocène — marnes & calcaires" },
+      // Crétacé
+      { color: "#7ab8c9", label: "Crétacé supérieur — craie, calcaires" },
+      { color: "#5a9db5", label: "Crétacé inférieur — marnes, grès, calcaires urgoniens" },
+      // Jurassique
+      { color: "#9a8fc7", label: "Jurassique supérieur (Malm) — calcaires récifaux" },
+      { color: "#7f73b5", label: "Jurassique moyen (Dogger) — calcaires oolithiques" },
+      { color: "#6557a3", label: "Jurassique inférieur (Lias) — marnes & calcaires" },
+      // Mésozoïque ancien
+      { color: "#c97a7a", label: "Trias — grès bigarrés, marnes irisées, calcaires" },
+      { color: "#b85c5c", label: "Permien — grès rouges, pélites, rhyolites" },
+      { color: "#a88a8a", label: "Carbonifère — schistes houillers, calcaires, grès" },
+      // Paléozoïque
+      { color: "#8a9a8a", label: "Dévonien — schistes, calcaires, grès" },
+      { color: "#7a8a8a", label: "Silurien — schistes ardoisiers, quartzites" },
+      { color: "#6a7a7a", label: "Ordovicien — grès armoricains, schistes" },
+      { color: "#5a6a6a", label: "Cambrien — schistes, grès, calcaires" },
+      // Précambrien
+      { color: "#c98a9a", label: "Protérozoïque — schistes & quartzites anciens" },
+      { color: "#b56a7a", label: "Archéen — gneiss & migmatites anciens" },
+      // Magmatiques plutoniques
+      { color: "#d98a9a", label: "Granites & granitoïdes" },
+      { color: "#c97a8a", label: "Granodiorites, diorites, monzonites" },
+      { color: "#e0a0a0", label: "Rhyolites & volcanites acides" },
+      { color: "#c48a6a", label: "Andésites & volcanites intermédiaires" },
+      { color: "#6a6a6a", label: "Basaltes & volcanites basiques" },
+      { color: "#5a6a5a", label: "Gabbros & dolérites" },
+      { color: "#4a5a4a", label: "Roches ultrabasiques (péridotites, serpentinites)" },
+      // Filons
+      { color: "#9a9a9a", label: "Filons (quartz, pegmatites, lamprophyres)" },
+      // Métamorphiques
+      { color: "#8a9a8a", label: "Schistes & micaschistes" },
+      { color: "#b0a0a0", label: "Gneiss & migmatites" },
+      { color: "#5a7a5a", label: "Amphibolites & éclogites" },
+      { color: "#d9d9d9", label: "Marbres & cipolins" },
+      { color: "#c9c9c9", label: "Quartzites" },
     ],
     footer: {
-      label: "Notice & légende InfoTerre (BRGM)",
+      label: "Légende officielle BRGM (lithologie)",
       href: "https://infoterre.brgm.fr/page/cartes-geologiques",
     },
   },
