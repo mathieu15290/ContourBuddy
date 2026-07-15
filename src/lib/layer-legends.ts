@@ -79,15 +79,14 @@ export const LAYER_LEGENDS: Partial<Record<LayerId, LegendDef>> = {
     title: "Réseau Natura 2000",
     source: "MNHN — Patrinat (diffusé via IGN Géoplateforme)",
     entries: [
-      { color: "#2f8a3e", label: "ZSC — Zone Spéciale de Conservation (Directive Habitats)" },
-      { color: "#8fc79a", label: "SIC / pSIC — Site d'Importance Communautaire" },
-      { color: "#c14b2c", label: "ZPS — Zone de Protection Spéciale (Directive Oiseaux)" },
-      { color: "#4a6b8a", label: "Habitats marins Natura 2000" },
+      { color: "#2f8a3e", label: "ZSC — Zone Spéciale de Conservation (Directive Habitats, art. 3)" },
+      { color: "#8fc79a", label: "SIC — Site d'Importance Communautaire (validé par la Commission)" },
+      { color: "#c7e3c9", label: "pSIC — Proposition de Site d'Importance Communautaire" },
+      { color: "#c14b2c", label: "ZPS — Zone de Protection Spéciale (Directive Oiseaux, 2009/147/CE)" },
+      { color: "#4a6b8a", label: "Site marin — habitats & espèces marines (annexes I & II)" },
+      { color: "#8fb3d1", label: "Site marin — oiseaux (annexe I Directive Oiseaux)" },
+      { color: "#5b3a2e", label: "Limite officielle du site (DOCOB)", pattern: "line" },
     ],
-    footer: {
-      label: "Réseau Natura 2000 — Ministère de la Transition écologique",
-      href: "https://www.ecologie.gouv.fr/politiques-publiques/reseau-europeen-natura-2000",
-    },
   },
 
   znieff: {
@@ -101,10 +100,6 @@ export const LAYER_LEGENDS: Partial<Record<LayerId, LegendDef>> = {
       { color: "#5a8f3e", label: "ZNIEFF marine type 1" },
       { color: "#a7c98c", label: "ZNIEFF marine type 2" },
     ],
-    footer: {
-      label: "Définition & méthodologie ZNIEFF (DREAL)",
-      href: "https://www.centre-val-de-loire.developpement-durable.gouv.fr/znieff-definition-et-methodologie-a4279.html",
-    },
   },
 
   cadastre: {
@@ -122,20 +117,36 @@ export const LAYER_LEGENDS: Partial<Record<LayerId, LegendDef>> = {
   },
 
   sols: {
-    title: "Carte des sols dominants",
+    title: "Grandes classes de sols (Référentiel Pédologique français)",
     source: "INRAE — GIS Sol",
     entries: [
-      { color: "#c8a26a", label: "Sols bruns (brunisols)" },
-      { color: "#a67c52", label: "Sols lessivés (luvisols)" },
-      { color: "#e6d3a3", label: "Sols calcaires (calcosols / calcisols)" },
-      { color: "#7a5230", label: "Sols hydromorphes (rédoxisols)" },
-      { color: "#4d3319", label: "Sols organiques (histosols)" },
-      { color: "#d9b382", label: "Sols peu évolués (régosols)" },
+      // Sols à profil A/C — peu évolués
+      { color: "#d9d9d9", label: "Lithosols / Rankosols — sols très minces sur roche dure" },
+      { color: "#d9b382", label: "Régosols — sols peu évolués sur roche meuble" },
+      { color: "#c9c088", label: "Fluviosols — sols alluviaux récents (vallées)" },
+      { color: "#b8a97a", label: "Colluviosols — sols de bas de pente / colluvions" },
+      { color: "#a89968", label: "Arénosols — sols sableux (podzoliques ou non)" },
+      // Sols bruns et lessivés — climax tempéré
+      { color: "#c8a26a", label: "Brunisols — sols bruns, altération in situ (forêts tempérées)" },
+      { color: "#a67c52", label: "Luvisols — sols lessivés (argile migrée en profondeur)" },
+      { color: "#8b5e3c", label: "Néoluvisols — luvisols peu différenciés (loess)" },
+      // Sols carbonatés
+      { color: "#e6d3a3", label: "Rendosols — sols calcaires superficiels sur roche dure" },
+      { color: "#d4b98a", label: "Calcosols — sols bruns calcaires profonds" },
+      { color: "#c5a878", label: "Calcisols — sols décarbonatés en surface" },
+      // Sols hydromorphes
+      { color: "#8fa87d", label: "Rédoxisols — engorgement temporaire (taches ocre/gris)" },
+      { color: "#5f7a5a", label: "Réductisols — engorgement permanent (gley bleu-vert)" },
+      { color: "#7a5230", label: "Pélosols — sols argileux gonflants, hydromorphes" },
+      // Sols acides / podzoliques
+      { color: "#6b4a2b", label: "Alocrisols — sols bruns acides (Al échangeable)" },
+      { color: "#3d2a1a", label: "Podzosols — podzols, horizon cendreux + accumulation Fe/Al" },
+      // Sols organiques et anthropiques
+      { color: "#4d3319", label: "Histosols — sols organiques (tourbières)" },
+      { color: "#b0413e", label: "Fersialsols — sols rouges méditerranéens riches en fer" },
+      { color: "#8a6d3b", label: "Vertisols — argiles gonflantes à fentes de retrait" },
+      { color: "#9e9e9e", label: "Anthroposols — sols fortement remaniés (urbains, miniers)" },
     ],
-    footer: {
-      label: "Légende détaillée GIS Sol",
-      href: "https://www.gissol.fr/donnees/cartes",
-    },
   },
 
   geologie: {
