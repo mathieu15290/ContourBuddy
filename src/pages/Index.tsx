@@ -313,35 +313,6 @@ const Index = () => {
             <ElevationProfile data={profileData} onClose={() => { setProfileData(null); setImportedTrack(null); }} onHoverPoint={setHoveredProfilePoint} />
           )}
 
-          {/* Mobile : Drawer + FAB Outils */}
-          <div className="md:hidden absolute left-0 right-0 bottom-0 z-[1100] flex justify-center pointer-events-none safe-bottom">
-            <div className="pointer-events-auto pb-3">
-              <Drawer open={mobilePanel} onOpenChange={setMobilePanel}>
-                <DrawerTrigger asChild>
-                  <button
-                    className="inline-flex items-center gap-2 min-h-[44px] px-5 py-2.5 rounded-full bg-primary text-primary-foreground shadow-lg text-sm font-medium active:scale-95 transition-transform"
-                    aria-label="Ouvrir les outils"
-                  >
-                    <Settings2 className="h-4 w-4" />
-                    {bounds ? "Outils" : "Sélectionnez une zone"}
-                  </button>
-                </DrawerTrigger>
-                <DrawerContent className="max-h-[85vh]">
-                  <DrawerHeader className="text-left">
-                    <DrawerTitle>Outils & paramètres</DrawerTitle>
-                  </DrawerHeader>
-                  <div className="px-4 pb-6 overflow-y-auto safe-bottom">
-                    <ControlPanel {...controlPanelProps} />
-                    {!bounds && !contours && (
-                      <p className="mt-4 text-xs text-muted-foreground text-center">
-                        Utilisez l'outil rectangle ou polygone sur la carte pour sélectionner une zone.
-                      </p>
-                    )}
-                  </div>
-                </DrawerContent>
-              </Drawer>
-            </div>
-          </div>
         </main>
       </div>
     </div>
