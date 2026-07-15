@@ -39,7 +39,6 @@ const Index = () => {
   const [profileLoading, setProfileLoading] = useState(false);
   const [hoveredProfilePoint, setHoveredProfilePoint] = useState<ProfilePoint | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [importedTrack, setImportedTrack] = useState<{ points: TrackPoint[]; name: string } | null>(null);
   const [layers, setLayers] = useState<LayerState[]>(DEFAULT_LAYERS);
   const [polygon, setPolygon] = useState<PolygonSelection | null>(null);
