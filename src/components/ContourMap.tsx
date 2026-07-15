@@ -836,16 +836,16 @@ export function ContourMap({
     const map = leafletMapRef.current;
     if (!map) return;
 
-    (["plan", "satellite", "cadastre"] as const).forEach((id) => {
-      const tile = baseLayersRef.current[id];
-      if (!tile) return;
+    (Object.keys(externalLayersRef.current) as LayerId[]).forEach((id) => {
+      const layer = externalLayersRef.current[id];
+      if (!layer) return;
       const state = layers.find((l) => l.id === id);
       if (!state) return;
       if (state.visible) {
-        if (!map.hasLayer(tile)) tile.addTo(map);
-        tile.setOpacity(state.opacity);
-      } else if (map.hasLayer(tile)) {
-        map.removeLayer(tile);
+        if (!map.hasLayer(layer)) layer.addTo(map);
+        setLayerOpacity(layer, state.opacity);
+      } else if (map.hasLayer(layer)) {
+        map.removeLayer(layer);
       }
     });
 
