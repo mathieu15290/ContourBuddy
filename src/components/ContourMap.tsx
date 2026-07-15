@@ -2,7 +2,8 @@ import { useEffect, useRef, useCallback, useState } from "react";
 import L from "leaflet";
 import type { ContourResult } from "@/lib/contours";
 import { getContourColor } from "@/lib/contours";
-import type { LayerState, LayerId } from "@/lib/layers";
+import type { LayerState, LayerId, ExternalLayerConfig } from "@/lib/layers";
+import { EXTERNAL_LAYER_CONFIGS } from "@/lib/layers";
 import {
   buildPolygonSelection,
   clipPolylineToPolygon,
