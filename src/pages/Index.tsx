@@ -262,7 +262,7 @@ const Index = () => {
       <div className="flex flex-1 overflow-hidden relative">
         {/* Desktop / Tablet Sidebar (collapsible on tablet) */}
         {!sidebarCollapsed && (
-          <aside className="w-80 border-r border-border bg-card overflow-y-auto p-4 shrink-0 hidden md:block safe-x">
+          <aside className="w-72 sm:w-80 border-r border-border bg-card overflow-y-auto p-4 shrink-0 safe-x">
             <ControlPanel {...controlPanelProps} />
             {!bounds && !contours && (
               <div className="mt-6 text-center text-sm text-muted-foreground px-2">
@@ -275,11 +275,11 @@ const Index = () => {
 
         {/* Map */}
         <main className="flex-1 relative" style={{ overscrollBehavior: "none" }}>
-          {/* Tablet+ : bouton repli/dépli sidebar */}
+          {/* Bouton repli/dépli sidebar */}
           <button
             onClick={() => setSidebarCollapsed((v) => !v)}
             title={sidebarCollapsed ? "Afficher le panneau" : "Masquer le panneau"}
-            className="hidden md:inline-flex items-center justify-center absolute top-2 left-2 z-[1000] min-h-[44px] min-w-[44px] rounded-md bg-card border border-border shadow-md text-foreground hover:bg-muted transition-colors"
+            className="inline-flex items-center justify-center absolute top-2 left-2 z-[1000] min-h-[44px] min-w-[44px] rounded-md bg-card border border-border shadow-md text-foreground hover:bg-muted transition-colors"
           >
             {sidebarCollapsed ? <PanelLeftOpen className="h-5 w-5" /> : <PanelLeftClose className="h-5 w-5" />}
           </button>
