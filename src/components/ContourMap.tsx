@@ -119,7 +119,7 @@ export function ContourMap({
 }: Props) {
   const leafletMapRef = useRef<L.Map | null>(null);
   const contourLayerRef = useRef<L.LayerGroup | null>(null);
-  const baseLayersRef = useRef<Partial<Record<LayerId, L.TileLayer>>>({});
+  const externalLayersRef = useRef<Partial<Record<LayerId, L.Layer>>>({});
   const slopeOverlayRef = useRef<L.ImageOverlay | null>(null);
   const aspectOverlayRef = useRef<L.ImageOverlay | null>(null);
   const rectRef = useRef<L.Rectangle | null>(null);
