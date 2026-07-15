@@ -13,15 +13,8 @@ import type { PolygonSelection } from "@/lib/polygon-utils";
 import { computeTerrain, type TerrainGrid } from "@/lib/terrain";
 import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "@/hooks/use-theme";
-import { Moon, Sun, Upload, Settings2, MoreVertical, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { Moon, Sun, Upload, MoreVertical, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import logo from "@/assets/logo.png";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerTrigger,
-} from "@/components/ui/drawer";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -45,7 +38,6 @@ const Index = () => {
   const [profileData, setProfileData] = useState<ProfilePoint[] | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
   const [hoveredProfilePoint, setHoveredProfilePoint] = useState<ProfilePoint | null>(null);
-  const [mobilePanel, setMobilePanel] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [importedTrack, setImportedTrack] = useState<{ points: TrackPoint[]; name: string } | null>(null);
   const [layers, setLayers] = useState<LayerState[]>(DEFAULT_LAYERS);
@@ -69,7 +61,6 @@ const Index = () => {
     setBounds(b);
     setContours(null);
     setGrid(null);
-    setMobilePanel(true);
   }, []);
 
   const handlePolygonChanged = useCallback((p: PolygonSelection | null) => {
@@ -78,7 +69,6 @@ const Index = () => {
       setBounds(p.bounds);
       setContours(null);
       setGrid(null);
-      setMobilePanel(true);
     }
   }, []);
 
@@ -262,7 +252,7 @@ const Index = () => {
       <div className="flex flex-1 overflow-hidden relative">
         {/* Desktop / Tablet Sidebar (collapsible on tablet) */}
         {!sidebarCollapsed && (
-          <aside className="w-80 border-r border-border bg-card overflow-y-auto p-4 shrink-0 hidden md:block safe-x">
+          <aside className="w-72 sm:w-80 border-r border-border bg-card overflow-y-auto p-4 shrink-0 safe-x">
             <ControlPanel {...controlPanelProps} />
             {!bounds && !contours && (
               <div className="mt-6 text-center text-sm text-muted-foreground px-2">
@@ -275,11 +265,11 @@ const Index = () => {
 
         {/* Map */}
         <main className="flex-1 relative" style={{ overscrollBehavior: "none" }}>
-          {/* Tablet+ : bouton repli/dépli sidebar */}
+          {/* Bouton repli/dépli sidebar */}
           <button
             onClick={() => setSidebarCollapsed((v) => !v)}
             title={sidebarCollapsed ? "Afficher le panneau" : "Masquer le panneau"}
-            className="hidden md:inline-flex items-center justify-center absolute top-2 left-2 z-[1000] min-h-[44px] min-w-[44px] rounded-md bg-card border border-border shadow-md text-foreground hover:bg-muted transition-colors"
+            className="inline-flex items-center justify-center absolute top-2 left-2 z-[1000] min-h-[44px] min-w-[44px] rounded-md bg-card border border-border shadow-md text-foreground hover:bg-muted transition-colors"
           >
             {sidebarCollapsed ? <PanelLeftOpen className="h-5 w-5" /> : <PanelLeftClose className="h-5 w-5" />}
           </button>
@@ -313,35 +303,6 @@ const Index = () => {
             <ElevationProfile data={profileData} onClose={() => { setProfileData(null); setImportedTrack(null); }} onHoverPoint={setHoveredProfilePoint} />
           )}
 
-          {/* Mobile : Drawer + FAB Outils */}
-          <div className="md:hidden absolute left-0 right-0 bottom-0 z-[1100] flex justify-center pointer-events-none safe-bottom">
-            <div className="pointer-events-auto pb-3">
-              <Drawer open={mobilePanel} onOpenChange={setMobilePanel}>
-                <DrawerTrigger asChild>
-                  <button
-                    className="inline-flex items-center gap-2 min-h-[44px] px-5 py-2.5 rounded-full bg-primary text-primary-foreground shadow-lg text-sm font-medium active:scale-95 transition-transform"
-                    aria-label="Ouvrir les outils"
-                  >
-                    <Settings2 className="h-4 w-4" />
-                    {bounds ? "Outils" : "Sélectionnez une zone"}
-                  </button>
-                </DrawerTrigger>
-                <DrawerContent className="max-h-[85vh]">
-                  <DrawerHeader className="text-left">
-                    <DrawerTitle>Outils & paramètres</DrawerTitle>
-                  </DrawerHeader>
-                  <div className="px-4 pb-6 overflow-y-auto safe-bottom">
-                    <ControlPanel {...controlPanelProps} />
-                    {!bounds && !contours && (
-                      <p className="mt-4 text-xs text-muted-foreground text-center">
-                        Utilisez l'outil rectangle ou polygone sur la carte pour sélectionner une zone.
-                      </p>
-                    )}
-                  </div>
-                </DrawerContent>
-              </Drawer>
-            </div>
-          </div>
         </main>
       </div>
     </div>
