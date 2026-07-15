@@ -61,7 +61,6 @@ const Index = () => {
     setBounds(b);
     setContours(null);
     setGrid(null);
-    setMobilePanel(true);
   }, []);
 
   const handlePolygonChanged = useCallback((p: PolygonSelection | null) => {
@@ -70,7 +69,6 @@ const Index = () => {
       setBounds(p.bounds);
       setContours(null);
       setGrid(null);
-      setMobilePanel(true);
     }
   }, []);
 
