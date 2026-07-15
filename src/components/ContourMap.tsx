@@ -60,6 +60,47 @@ const midpointIcon = L.divIcon({
   iconAnchor: [9, 9],
 });
 
+// -----------------------------------------------------------------------------
+// Factory Leaflet pour les couches externes (WMTS / WMS / group).
+// -----------------------------------------------------------------------------
+function buildExternalLayer(cfg: ExternalLayerConfig): L.Layer {
+  if (cfg.kind === "wmts") {
+    const url =
+      `${cfg.url}?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0` +
+      `&LAYER=${encodeURIComponent(cfg.layer)}` +
+      `&STYLE=${encodeURIComponent(cfg.style ?? "normal")}` +
+      `&FORMAT=${encodeURIComponent(cfg.format ?? "image/png")}` +
+      `&TILEMATRIXSET=${cfg.matrixSet ?? "PM"}` +
+      `&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}`;
+    return L.tileLayer(url, {
+      maxZoom: cfg.maxZoom ?? 19,
+      attribution: cfg.attribution,
+    });
+  }
+  if (cfg.kind === "wms") {
+    return L.tileLayer.wms(cfg.url, {
+      layers: cfg.layers,
+      format: cfg.format ?? "image/png",
+      version: cfg.version ?? "1.3.0",
+      transparent: cfg.transparent ?? true,
+      attribution: cfg.attribution,
+      maxZoom: cfg.maxZoom ?? 19,
+    });
+  }
+  const grp = L.layerGroup();
+  cfg.children.forEach((c) => buildExternalLayer(c).addTo(grp));
+  return grp;
+}
+
+function setLayerOpacity(layer: L.Layer, opacity: number) {
+  const anyLayer = layer as L.Layer & { setOpacity?: (o: number) => void };
+  if (typeof anyLayer.setOpacity === "function") {
+    anyLayer.setOpacity(opacity);
+  } else if (layer instanceof L.LayerGroup) {
+    layer.eachLayer((child) => setLayerOpacity(child, opacity));
+  }
+}
+
 export function ContourMap({
   center,
   zoom,
