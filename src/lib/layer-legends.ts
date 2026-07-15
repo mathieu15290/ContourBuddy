@@ -90,15 +90,11 @@ export const LAYER_LEGENDS: Partial<Record<LayerId, LegendDef>> = {
   },
 
   znieff: {
-    title: "ZNIEFF — Inventaire du patrimoine naturel",
-    source: "MNHN — Patrinat (diffusé via IGN Géoplateforme)",
+    title: "ZNIEFF (types 1 & 2)",
+    source: "INPN / MNHN — Patrinat",
     entries: [
-      { color: "#e94e1b", label: "ZNIEFF type 1 — contour", pattern: "line" },
-      { color: "#f2b134", label: "ZNIEFF type 1 — secteurs à forte valeur biologique (espèces & habitats déterminants)" },
-      { color: "#b45f06", label: "ZNIEFF type 2 — contour", pattern: "line" },
-      { color: "#f7d894", label: "ZNIEFF type 2 — grands ensembles naturels cohérents" },
-      { color: "#5a8f3e", label: "ZNIEFF marine type 1" },
-      { color: "#a7c98c", label: "ZNIEFF marine type 2" },
+      { color: "#f2b134", label: "ZNIEFF type 1 — secteurs de forte valeur biologique (espèces & habitats déterminants)" },
+      { color: "#5a8f3e", label: "ZNIEFF type 2 — grands ensembles naturels riches et peu modifiés" },
     ],
   },
 
