@@ -2,7 +2,8 @@ import { useEffect, useRef, useCallback, useState } from "react";
 import L from "leaflet";
 import type { ContourResult } from "@/lib/contours";
 import { getContourColor } from "@/lib/contours";
-import type { LayerState, LayerId } from "@/lib/layers";
+import type { LayerState, LayerId, ExternalLayerConfig } from "@/lib/layers";
+import { EXTERNAL_LAYER_CONFIGS } from "@/lib/layers";
 import {
   buildPolygonSelection,
   clipPolylineToPolygon,
@@ -59,6 +60,54 @@ const midpointIcon = L.divIcon({
   iconAnchor: [9, 9],
 });
 
+// -----------------------------------------------------------------------------
+// Factory Leaflet pour les couches externes (WMTS / WMS / group).
+// -----------------------------------------------------------------------------
+function buildExternalLayer(cfg: ExternalLayerConfig): L.Layer {
+  if (cfg.kind === "wmts") {
+    const url =
+      `${cfg.url}?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0` +
+      `&LAYER=${encodeURIComponent(cfg.layer)}` +
+      `&STYLE=${encodeURIComponent(cfg.style ?? "normal")}` +
+      `&FORMAT=${encodeURIComponent(cfg.format ?? "image/png")}` +
+      `&TILEMATRIXSET=${cfg.matrixSet ?? "PM"}` +
+      `&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}`;
+    // Extrait le zoom min du nom du TileMatrixSet (ex. "PM_6_16" → minZoom=6)
+    // pour empêcher Leaflet de demander des tuiles hors plage (→ 404).
+    const tmsMatch = /^PM_(\d+)_(\d+)$/.exec(cfg.matrixSet ?? "");
+    const minZoom = tmsMatch ? parseInt(tmsMatch[1], 10) : 0;
+    const maxNativeZoom = tmsMatch ? parseInt(tmsMatch[2], 10) : cfg.maxZoom ?? 19;
+    return L.tileLayer(url, {
+      minZoom,
+      maxNativeZoom,
+      maxZoom: cfg.maxZoom ?? 19,
+      attribution: cfg.attribution,
+    });
+  }
+  if (cfg.kind === "wms") {
+    return L.tileLayer.wms(cfg.url, {
+      layers: cfg.layers,
+      format: cfg.format ?? "image/png",
+      version: cfg.version ?? "1.3.0",
+      transparent: cfg.transparent ?? true,
+      attribution: cfg.attribution,
+      maxZoom: cfg.maxZoom ?? 19,
+    });
+  }
+  const grp = L.layerGroup();
+  cfg.children.forEach((c) => buildExternalLayer(c).addTo(grp));
+  return grp;
+}
+
+function setLayerOpacity(layer: L.Layer, opacity: number) {
+  const anyLayer = layer as L.Layer & { setOpacity?: (o: number) => void };
+  if (typeof anyLayer.setOpacity === "function") {
+    anyLayer.setOpacity(opacity);
+  } else if (layer instanceof L.LayerGroup) {
+    layer.eachLayer((child) => setLayerOpacity(child, opacity));
+  }
+}
+
 export function ContourMap({
   center,
   zoom,
@@ -77,7 +126,7 @@ export function ContourMap({
 }: Props) {
   const leafletMapRef = useRef<L.Map | null>(null);
   const contourLayerRef = useRef<L.LayerGroup | null>(null);
-  const baseLayersRef = useRef<Partial<Record<LayerId, L.TileLayer>>>({});
+  const externalLayersRef = useRef<Partial<Record<LayerId, L.Layer>>>({});
   const slopeOverlayRef = useRef<L.ImageOverlay | null>(null);
   const aspectOverlayRef = useRef<L.ImageOverlay | null>(null);
   const rectRef = useRef<L.Rectangle | null>(null);
@@ -122,25 +171,14 @@ export function ContourMap({
       zoomControl: true,
     });
 
-    const planLayer = L.tileLayer(
-      "https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}",
-      { maxZoom: 19, attribution: "© IGN" }
-    );
-
-    const satelliteLayer = L.tileLayer(
-      "https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&STYLE=normal&FORMAT=image/jpeg&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}",
-      { maxZoom: 19, attribution: "© IGN" }
-    );
-
-    const cadastreLayer = L.tileLayer(
-      "https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=CADASTRALPARCELS.PARCELLAIRE_EXPRESS&STYLE=PCI vecteur&FORMAT=image/png&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}",
-      { maxZoom: 19, attribution: "© IGN", opacity: 0.7 }
-    );
-
-    planLayer.addTo(map);
-    satelliteLayer.addTo(map);
-    cadastreLayer.addTo(map);
-    baseLayersRef.current = { plan: planLayer, satellite: satelliteLayer, cadastre: cadastreLayer };
+    // Instancie toutes les couches externes déclarées; la synchro visibilité/opacité
+    // est gérée par un useEffect séparé (voir plus bas).
+    const built: Partial<Record<LayerId, L.Layer>> = {};
+    (Object.keys(EXTERNAL_LAYER_CONFIGS) as LayerId[]).forEach((id) => {
+      const cfg = EXTERNAL_LAYER_CONFIGS[id];
+      if (cfg) built[id] = buildExternalLayer(cfg);
+    });
+    externalLayersRef.current = built;
 
     // Custom draw buttons
     const DrawControl = L.Control.extend({
@@ -805,16 +843,16 @@ export function ContourMap({
     const map = leafletMapRef.current;
     if (!map) return;
 
-    (["plan", "satellite", "cadastre"] as const).forEach((id) => {
-      const tile = baseLayersRef.current[id];
-      if (!tile) return;
+    (Object.keys(externalLayersRef.current) as LayerId[]).forEach((id) => {
+      const layer = externalLayersRef.current[id];
+      if (!layer) return;
       const state = layers.find((l) => l.id === id);
       if (!state) return;
       if (state.visible) {
-        if (!map.hasLayer(tile)) tile.addTo(map);
-        tile.setOpacity(state.opacity);
-      } else if (map.hasLayer(tile)) {
-        map.removeLayer(tile);
+        if (!map.hasLayer(layer)) layer.addTo(map);
+        setLayerOpacity(layer, state.opacity);
+      } else if (map.hasLayer(layer)) {
+        map.removeLayer(layer);
       }
     });
 
