@@ -72,7 +72,14 @@ function buildExternalLayer(cfg: ExternalLayerConfig): L.Layer {
       `&FORMAT=${encodeURIComponent(cfg.format ?? "image/png")}` +
       `&TILEMATRIXSET=${cfg.matrixSet ?? "PM"}` +
       `&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}`;
+    // Extrait le zoom min du nom du TileMatrixSet (ex. "PM_6_16" → minZoom=6)
+    // pour empêcher Leaflet de demander des tuiles hors plage (→ 404).
+    const tmsMatch = /^PM_(\d+)_(\d+)$/.exec(cfg.matrixSet ?? "");
+    const minZoom = tmsMatch ? parseInt(tmsMatch[1], 10) : 0;
+    const maxNativeZoom = tmsMatch ? parseInt(tmsMatch[2], 10) : cfg.maxZoom ?? 19;
     return L.tileLayer(url, {
+      minZoom,
+      maxNativeZoom,
       maxZoom: cfg.maxZoom ?? 19,
       attribution: cfg.attribution,
     });
