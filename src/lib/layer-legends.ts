@@ -148,10 +148,6 @@ export const LAYER_LEGENDS: Partial<Record<LayerId, LegendDef>> = {
       { color: "#9e9e9e", label: "Anthroposols — sols fortement remaniés (urbains, miniers)" },
     ],
   },
-      label: "Légende détaillée GIS Sol",
-      href: "https://www.gissol.fr/donnees/cartes",
-    },
-  },
 
   geologie: {
     title: "Carte géologique 1/50 000",
