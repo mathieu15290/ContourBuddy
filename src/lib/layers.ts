@@ -166,7 +166,7 @@ export const EXTERNAL_LAYER_CONFIGS: Partial<Record<LayerId, ExternalLayerConfig
   geologie: {
     kind: "wms",
     url: BRGM_WMS,
-    layers: "SCAN_D_GEOL50",
+    layers: "GEOLOGIE",
     format: "image/png",
     version: "1.3.0",
     transparent: true,
