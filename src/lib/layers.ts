@@ -36,25 +36,47 @@ export type LayerId =
   | "sols"
   | "geologie";
 
-export type LayerGroup = "base" | "terrain" | "environment";
-
-export interface LayerSource {
-  provider: "IGN" | "MNHN" | "BRGM" | "INRAE";
-  label: string;
-  url: string;
-}
+export type LayerSection =
+  | "fonds"
+  | "topo"
+  | "environnement"
+  | "eau"
+  | "bati"
+  | "sol"
+  | "climat";
 
 export interface LayerState {
   id: LayerId;
   label: string;
+  section: LayerSection;
   visible: boolean;
   opacity: number; // 0..1
-  group: LayerGroup;
-  /** Labels n'a pas d'opacité, juste visibilité. */
+  /** Masque le slider (ex : étiquettes d'altitude). */
   noOpacity?: boolean;
-  /** Métadonnées (source, lien) pour la popover d'info. */
-  source?: LayerSource;
+  /** Service externe indisponible → message affiché à la place du toggle. */
+  unavailable?: string;
 }
+
+export const SECTION_META: Record<LayerSection, { label: string; emoji: string }> = {
+  fonds:         { label: "Fonds de plan",     emoji: "🗺️" },
+  topo:          { label: "Topographie",       emoji: "⛰️" },
+  environnement: { label: "Environnement",     emoji: "🌿" },
+  eau:           { label: "Eau",               emoji: "💧" },
+  bati:          { label: "Bâti & cadastre",   emoji: "🏠" },
+  sol:           { label: "Sol",               emoji: "🌱" },
+  climat:        { label: "Climat",            emoji: "🌦️" },
+};
+
+/** Ordre d'affichage des sections dans le panneau. */
+export const SECTION_ORDER: LayerSection[] = [
+  "topo",
+  "environnement",
+  "eau",
+  "bati",
+  "sol",
+  "climat",
+  "fonds",
+];
 
 // -----------------------------------------------------------------------------
 // Configurations des couches externes (tuiles) créées côté carte.
@@ -157,40 +179,30 @@ export const EXTERNAL_LAYER_CONFIGS: Partial<Record<LayerId, ExternalLayerConfig
 // État par défaut affiché dans le LayersPanel.
 // -----------------------------------------------------------------------------
 export const DEFAULT_LAYERS: LayerState[] = [
-  // — Fonds de carte —
-  { id: "plan",      label: "Plan IGN",              visible: true,  opacity: 1, group: "base",
-    source: { provider: "IGN", label: "IGN Géoplateforme", url: "https://geoservices.ign.fr/" } },
-  { id: "satellite", label: "Photo aérienne",        visible: false, opacity: 1, group: "base",
-    source: { provider: "IGN", label: "BD ORTHO®", url: "https://geoservices.ign.fr/bdortho" } },
-  { id: "cadastre",  label: "Cadastre",              visible: false, opacity: 0.7, group: "base",
-    source: { provider: "IGN", label: "Parcellaire Express", url: "https://geoservices.ign.fr/pci" } },
-  { id: "lidar",     label: "LIDAR HD (ombrage MNT)", visible: false, opacity: 0.7, group: "base",
-    source: { provider: "IGN", label: "LIDAR HD", url: "https://geoservices.ign.fr/lidarhd" } },
-
-  // — Analyses terrain —
-  { id: "contours",  label: "Courbes de niveaux",    visible: true,  opacity: 1, group: "terrain" },
-  { id: "labels",    label: "Étiquettes d'altitude", visible: true,  opacity: 1, group: "terrain", noOpacity: true },
-  { id: "slope",     label: "Pentes (permaculture)", visible: false, opacity: 0.6, group: "terrain" },
-  { id: "aspect",    label: "Exposition (azimut)",   visible: false, opacity: 0.6, group: "terrain" },
-  { id: "track",     label: "Trace importée",        visible: true,  opacity: 0.9, group: "terrain" },
+  // — Topographie —
+  { id: "contours", label: "Courbes de niveaux",     section: "topo", visible: true,  opacity: 1 },
+  { id: "labels",   label: "Étiquettes d'altitude",  section: "topo", visible: true,  opacity: 1, noOpacity: true },
+  { id: "slope",    label: "Pentes (permaculture)",  section: "topo", visible: false, opacity: 0.6 },
+  { id: "aspect",   label: "Exposition (azimut)",    section: "topo", visible: false, opacity: 0.6 },
+  { id: "lidar",    label: "LIDAR HD (ombrage MNT)", section: "topo", visible: false, opacity: 0.7 },
+  { id: "track",    label: "Trace importée",         section: "topo", visible: true,  opacity: 0.9 },
 
   // — Environnement —
-  { id: "foret",      label: "Forêts (BD Forêt V2)",         visible: false, opacity: 0.7, group: "environment",
-    source: { provider: "IGN", label: "BD Forêt® V2", url: "https://geoservices.ign.fr/bdforet" } },
-  { id: "natura2000", label: "Natura 2000 (ZSC + ZPS)",      visible: false, opacity: 0.7, group: "environment",
-    source: { provider: "MNHN", label: "INPN — Patrinat", url: "https://inpn.mnhn.fr/programme/natura2000" } },
-  { id: "znieff",     label: "ZNIEFF 1 & 2",                 visible: false, opacity: 0.7, group: "environment",
-    source: { provider: "MNHN", label: "INPN — ZNIEFF", url: "https://inpn.mnhn.fr/programme/inventaire-znieff" } },
-  { id: "hydro",      label: "Hydrographie (BD TOPO)",       visible: false, opacity: 0.7, group: "environment",
-    source: { provider: "IGN", label: "BD TOPO®", url: "https://geoservices.ign.fr/bdtopo" } },
-  { id: "sols",       label: "Carte des sols (GIS Sol)",     visible: false, opacity: 0.7, group: "environment",
-    source: { provider: "INRAE", label: "GIS Sol", url: "https://www.gissol.fr/" } },
-  { id: "geologie",   label: "Géologie (BRGM 1/50 000)",     visible: false, opacity: 0.7, group: "environment",
-    source: { provider: "BRGM", label: "InfoTerre BRGM", url: "https://infoterre.brgm.fr/" } },
-];
+  { id: "foret",      label: "Forêts (BD Forêt V2)",    section: "environnement", visible: false, opacity: 0.7 },
+  { id: "natura2000", label: "Natura 2000 (ZSC + ZPS)", section: "environnement", visible: false, opacity: 0.7 },
+  { id: "znieff",     label: "ZNIEFF 1 & 2",            section: "environnement", visible: false, opacity: 0.7 },
 
-export const LAYER_GROUP_LABELS: Record<LayerGroup, string> = {
-  base: "Fonds de carte",
-  terrain: "Analyses terrain",
-  environment: "Environnement",
-};
+  // — Eau —
+  { id: "hydro", label: "Hydrographie (BD TOPO)", section: "eau", visible: false, opacity: 0.7 },
+
+  // — Bâti & cadastre —
+  { id: "cadastre", label: "Cadastre", section: "bati", visible: false, opacity: 0.7 },
+
+  // — Sol —
+  { id: "sols",     label: "Carte des sols (GIS Sol)",   section: "sol", visible: false, opacity: 0.7 },
+  { id: "geologie", label: "Géologie (BRGM 1/50 000)",   section: "sol", visible: false, opacity: 0.7 },
+
+  // — Fonds de plan (tout en bas de pile) —
+  { id: "plan",      label: "Plan IGN",       section: "fonds", visible: true,  opacity: 1 },
+  { id: "satellite", label: "Photo aérienne", section: "fonds", visible: false, opacity: 1 },
+];
