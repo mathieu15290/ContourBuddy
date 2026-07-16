@@ -154,6 +154,13 @@ export function ClimateCard({ lat, lon }: Props) {
                           <p className="font-semibold">{MONTHS_FR[m.month - 1]}</p>
                           <p>{m.rrTotal.toFixed(1)} mm — {cls.label}</p>
                           {m.tMean != null && <p>T. moy. {m.tMean.toFixed(1)}°C</p>}
+                          {(m.tMin != null || m.tMax != null) && (
+                            <p>
+                              {m.tMin != null && <>min {m.tMin.toFixed(1)}°C</>}
+                              {m.tMin != null && m.tMax != null && " · "}
+                              {m.tMax != null && <>max {m.tMax.toFixed(1)}°C</>}
+                            </p>
+                          )}
                         </TooltipContent>
                       </Tooltip>
                     );
