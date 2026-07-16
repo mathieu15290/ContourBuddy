@@ -169,6 +169,11 @@ const Index = () => {
     minElev,
     maxElev,
     area: polygon ? polygon.areaKm2 : bounds ? calculateArea(bounds) : 0,
+    centroid: polygon
+      ? { lat: polygon.bounds.south + (polygon.bounds.north - polygon.bounds.south) / 2, lon: polygon.bounds.west + (polygon.bounds.east - polygon.bounds.west) / 2 }
+      : bounds
+        ? { lat: (bounds.north + bounds.south) / 2, lon: (bounds.east + bounds.west) / 2 }
+        : null,
     onExportGeoJSON: () => contours && exportGeoJSON(contours),
     onExportDXF: () => contours && exportDXF(contours),
     onExportKML: () => contours && exportKML(contours),

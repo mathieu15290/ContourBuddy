@@ -148,6 +148,10 @@ export function ControlPanel({
         </Card>
       )}
 
+      {centroid && <ClimateCard lat={centroid.lat} lon={centroid.lon} />}
+
+
+
       {/* Export panel */}
       {contours && (
         <Card>
