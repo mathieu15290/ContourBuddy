@@ -72,7 +72,8 @@ function parseAndIndex(csv: string): Map<string, StationAgg> {
   const header = lines[0].split(';'); const idx = (n: string) => header.indexOf(n);
   const I_NUM = idx('NUM_POSTE'), I_NOM = idx('NOM_USUEL'), I_LAT = idx('LAT'), I_LON = idx('LON'),
     I_ALT = idx('ALTI'), I_YM = idx('AAAAMM'),
-    I_RR = idx('RR'), I_TM = idx('TM'), I_TN = idx('TN'), I_TX = idx('TX'), I_GEL = idx('NBJGELEE');
+    I_RR = idx('RR'), I_TM = idx('TM'), I_TN = idx('TN'), I_TX = idx('TX'), I_GEL = idx('NBJGELEE'),
+    I_TNAB = idx('TNAB'), I_TXAB = idx('TXAB');
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i]; if (!line) continue;
     const c = line.split(';'); const ym = c[I_YM]; if (!ym || ym.length < 6) continue;
@@ -88,16 +89,21 @@ function parseAndIndex(csv: string): Map<string, StationAgg> {
         rr: Array.from({ length: 12 }, () => []), tm: Array.from({ length: 12 }, () => []),
         tn: Array.from({ length: 12 }, () => []), tx: Array.from({ length: 12 }, () => []),
         gel: Array.from({ length: 12 }, () => []),
+        tnab: Array.from({ length: 12 }, () => []), txab: Array.from({ length: 12 }, () => []),
       };
       stations.set(id, s);
     }
     const num = (r: string) => { if (!r) return; const n = parseFloat(r); return isFinite(n) ? n : undefined; };
     const rr = num(c[I_RR]), tm = num(c[I_TM]), tn = num(c[I_TN]), tx = num(c[I_TX]), gel = num(c[I_GEL]);
+    const tnab = I_TNAB >= 0 ? num(c[I_TNAB]) : undefined;
+    const txab = I_TXAB >= 0 ? num(c[I_TXAB]) : undefined;
     if (rr !== undefined) s.rr[month].push(rr);
     if (tm !== undefined) s.tm[month].push(tm);
     if (tn !== undefined) s.tn[month].push(tn);
     if (tx !== undefined) s.tx[month].push(tx);
     if (gel !== undefined) s.gel[month].push(gel);
+    if (tnab !== undefined) s.tnab[month].push(tnab);
+    if (txab !== undefined) s.txab[month].push(txab);
   }
   return stations;
 }
