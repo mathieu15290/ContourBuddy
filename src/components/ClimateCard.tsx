@@ -111,15 +111,15 @@ export function ClimateCard({ lat, lon }: Props) {
                 <p className="font-semibold">{Math.round(data.annual.rrTotal)} mm</p>
               </div>
               <div className="bg-muted rounded-md p-2 text-center">
-                <p className="text-muted-foreground text-[10px]">T. min moy.</p>
+                <p className="text-muted-foreground text-[10px]">T. min absolue</p>
                 <p className="font-semibold text-topo-blue">
-                  {(() => { const v = avg(data.monthly.map(m => m.tMin)); return v != null ? `${v.toFixed(1)}°C` : "—"; })()}
+                  {data.annual.tMinAbs != null ? `${data.annual.tMinAbs.toFixed(1)}°C` : "—"}
                 </p>
               </div>
               <div className="bg-muted rounded-md p-2 text-center">
-                <p className="text-muted-foreground text-[10px]">T. max moy.</p>
+                <p className="text-muted-foreground text-[10px]">T. max absolue</p>
                 <p className="font-semibold text-topo-brown-dark">
-                  {(() => { const v = avg(data.monthly.map(m => m.tMax)); return v != null ? `${v.toFixed(1)}°C` : "—"; })()}
+                  {data.annual.tMaxAbs != null ? `${data.annual.tMaxAbs.toFixed(1)}°C` : "—"}
                 </p>
               </div>
               <div className="bg-muted rounded-md p-2 text-center col-span-2">
