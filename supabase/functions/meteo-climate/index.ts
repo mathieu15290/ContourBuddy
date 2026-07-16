@@ -63,6 +63,7 @@ async function fetchDeptCsv(dept: string) {
 interface StationAgg {
   id: string; nom: string; lat: number; lon: number; alti: number | null;
   rr: number[][]; tm: number[][]; tn: number[][]; tx: number[][]; gel: number[][];
+  tnab: number[][]; txab: number[][];
 }
 
 function parseAndIndex(csv: string): Map<string, StationAgg> {
