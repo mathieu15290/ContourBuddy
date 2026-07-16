@@ -25,6 +25,11 @@ interface ClimateData {
   cacheReason?: string;
 }
 
+function avg(nums: (number | null)[]): number | null {
+  const v = nums.filter((n): n is number => n != null);
+  return v.length ? Math.round((v.reduce((a, b) => a + b, 0) / v.length) * 10) / 10 : null;
+}
+
 const MONTHS_FR = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
 const MONTHS_INIT = ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
 
