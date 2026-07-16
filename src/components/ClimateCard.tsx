@@ -12,6 +12,8 @@ interface MonthlyRow {
   tMean: number | null;
   tMin: number | null;
   tMax: number | null;
+  tMinAbs: number | null;
+  tMaxAbs: number | null;
   gelDays: number;
   yearsUsed: number;
 }
@@ -20,14 +22,9 @@ interface ClimateData {
   distanceKm: number;
   period: { startYear: number; endYear: number; yearsRequested: number; yearsUsed: number };
   monthly: MonthlyRow[];
-  annual: { rrTotal: number; tMean: number; gelDays: number };
+  annual: { rrTotal: number; tMean: number; tMinAbs: number | null; tMaxAbs: number | null; gelDays: number };
   cached?: boolean;
   cacheReason?: string;
-}
-
-function avg(nums: (number | null)[]): number | null {
-  const v = nums.filter((n): n is number => n != null);
-  return v.length ? Math.round((v.reduce((a, b) => a + b, 0) / v.length) * 10) / 10 : null;
 }
 
 const MONTHS_FR = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
