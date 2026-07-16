@@ -112,19 +112,29 @@ const mean = (a: number[]) => a.length ? a.reduce((p, c) => p + c, 0) / a.length
 const r1 = (v: number | null) => v == null ? null : Math.round(v * 10) / 10;
 
 function aggregateStation(s: StationAgg, lat: number, lon: number) {
-  const monthly = Array.from({ length: 12 }, (_, m) => ({
-    month: m + 1,
-    rrTotal: r1(mean(s.rr[m])) ?? 0,
-    tMean: r1(mean(s.tm[m])),
-    tMin: r1(mean(s.tn[m])),
-    tMax: r1(mean(s.tx[m])),
-    gelDays: Math.round(mean(s.gel[m]) ?? 0),
-    yearsUsed: s.rr[m].length,
-  }));
+  const monthly = Array.from({ length: 12 }, (_, m) => {
+    const tnabArr = s.tnab[m].length ? s.tnab[m] : s.tn[m];
+    const txabArr = s.txab[m].length ? s.txab[m] : s.tx[m];
+    return {
+      month: m + 1,
+      rrTotal: r1(mean(s.rr[m])) ?? 0,
+      tMean: r1(mean(s.tm[m])),
+      tMin: r1(mean(s.tn[m])),
+      tMax: r1(mean(s.tx[m])),
+      tMinAbs: tnabArr.length ? r1(Math.min(...tnabArr)) : null,
+      tMaxAbs: txabArr.length ? r1(Math.max(...txabArr)) : null,
+      gelDays: Math.round(mean(s.gel[m]) ?? 0),
+      yearsUsed: s.rr[m].length,
+    };
+  });
   const yearsUsed = Math.max(...monthly.map(m => m.yearsUsed));
+  const tMinAbsVals = monthly.map(m => m.tMinAbs).filter((v): v is number => v != null);
+  const tMaxAbsVals = monthly.map(m => m.tMaxAbs).filter((v): v is number => v != null);
   const annual = {
     rrTotal: Math.round(monthly.reduce((a, b) => a + b.rrTotal, 0) * 10) / 10,
     tMean: r1(mean(monthly.map(m => m.tMean).filter((v): v is number => v != null))) ?? 0,
+    tMinAbs: tMinAbsVals.length ? r1(Math.min(...tMinAbsVals)) : null,
+    tMaxAbs: tMaxAbsVals.length ? r1(Math.max(...tMaxAbsVals)) : null,
     gelDays: monthly.reduce((a, b) => a + b.gelDays, 0),
   };
   return {
