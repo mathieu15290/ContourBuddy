@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import type { ContourResult } from "@/lib/contours";
 import logo from "@/assets/logo.png";
+import { ClimateCard } from "@/components/ClimateCard";
 
 interface Props {
   interval: number;
@@ -31,6 +32,7 @@ interface Props {
   minElev: number;
   maxElev: number;
   area: number;
+  centroid: { lat: number; lon: number } | null;
   onExportGeoJSON: () => void;
   onExportDXF: () => void;
   onExportKML: () => void;
@@ -49,6 +51,7 @@ export function ControlPanel({
   minElev,
   maxElev,
   area,
+  centroid,
   onExportGeoJSON,
   onExportDXF,
   onExportKML,
@@ -144,6 +147,10 @@ export function ControlPanel({
           </CardContent>
         </Card>
       )}
+
+      {centroid && <ClimateCard lat={centroid.lat} lon={centroid.lon} />}
+
+
 
       {/* Export panel */}
       {contours && (
