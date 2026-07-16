@@ -14,7 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      meteo_station_climate_cache: {
+        Row: {
+          computed_at: string
+          data: Json
+          end_year: number
+          start_year: number
+          station_id: string
+          station_lat: number | null
+          station_lon: number | null
+          years_requested: number
+        }
+        Insert: {
+          computed_at?: string
+          data: Json
+          end_year: number
+          start_year: number
+          station_id: string
+          station_lat?: number | null
+          station_lon?: number | null
+          years_requested: number
+        }
+        Update: {
+          computed_at?: string
+          data?: Json
+          end_year?: number
+          start_year?: number
+          station_id?: string
+          station_lat?: number | null
+          station_lon?: number | null
+          years_requested?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
