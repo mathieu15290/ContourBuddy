@@ -25,6 +25,11 @@ interface ClimateData {
   cacheReason?: string;
 }
 
+function avg(nums: (number | null)[]): number | null {
+  const v = nums.filter((n): n is number => n != null);
+  return v.length ? Math.round((v.reduce((a, b) => a + b, 0) / v.length) * 10) / 10 : null;
+}
+
 const MONTHS_FR = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
 const MONTHS_INIT = ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
 
@@ -99,7 +104,7 @@ export function ClimateCard({ lat, lon }: Props) {
               )}
             </p>
 
-            <div className="grid grid-cols-3 gap-2 text-sm">
+            <div className="grid grid-cols-2 gap-2 text-sm">
               <div className="bg-muted rounded-md p-2 text-center">
                 <p className="text-muted-foreground text-[10px]">Temp. moy.</p>
                 <p className="font-semibold">{data.annual.tMean.toFixed(1)}°C</p>
@@ -109,7 +114,19 @@ export function ClimateCard({ lat, lon }: Props) {
                 <p className="font-semibold">{Math.round(data.annual.rrTotal)} mm</p>
               </div>
               <div className="bg-muted rounded-md p-2 text-center">
-                <p className="text-muted-foreground text-[10px]">Jours gel</p>
+                <p className="text-muted-foreground text-[10px]">T. min moy.</p>
+                <p className="font-semibold text-topo-blue">
+                  {(() => { const v = avg(data.monthly.map(m => m.tMin)); return v != null ? `${v.toFixed(1)}°C` : "—"; })()}
+                </p>
+              </div>
+              <div className="bg-muted rounded-md p-2 text-center">
+                <p className="text-muted-foreground text-[10px]">T. max moy.</p>
+                <p className="font-semibold text-topo-brown-dark">
+                  {(() => { const v = avg(data.monthly.map(m => m.tMax)); return v != null ? `${v.toFixed(1)}°C` : "—"; })()}
+                </p>
+              </div>
+              <div className="bg-muted rounded-md p-2 text-center col-span-2">
+                <p className="text-muted-foreground text-[10px]">Jours de gel / an</p>
                 <p className="font-semibold">{data.annual.gelDays}</p>
               </div>
             </div>
@@ -137,6 +154,13 @@ export function ClimateCard({ lat, lon }: Props) {
                           <p className="font-semibold">{MONTHS_FR[m.month - 1]}</p>
                           <p>{m.rrTotal.toFixed(1)} mm — {cls.label}</p>
                           {m.tMean != null && <p>T. moy. {m.tMean.toFixed(1)}°C</p>}
+                          {(m.tMin != null || m.tMax != null) && (
+                            <p>
+                              {m.tMin != null && <>min {m.tMin.toFixed(1)}°C</>}
+                              {m.tMin != null && m.tMax != null && " · "}
+                              {m.tMax != null && <>max {m.tMax.toFixed(1)}°C</>}
+                            </p>
+                          )}
                         </TooltipContent>
                       </Tooltip>
                     );
