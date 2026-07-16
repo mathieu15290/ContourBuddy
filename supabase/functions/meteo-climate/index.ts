@@ -63,6 +63,7 @@ async function fetchDeptCsv(dept: string) {
 interface StationAgg {
   id: string; nom: string; lat: number; lon: number; alti: number | null;
   rr: number[][]; tm: number[][]; tn: number[][]; tx: number[][]; gel: number[][];
+  tnab: number[][]; txab: number[][];
 }
 
 function parseAndIndex(csv: string): Map<string, StationAgg> {
@@ -71,7 +72,8 @@ function parseAndIndex(csv: string): Map<string, StationAgg> {
   const header = lines[0].split(';'); const idx = (n: string) => header.indexOf(n);
   const I_NUM = idx('NUM_POSTE'), I_NOM = idx('NOM_USUEL'), I_LAT = idx('LAT'), I_LON = idx('LON'),
     I_ALT = idx('ALTI'), I_YM = idx('AAAAMM'),
-    I_RR = idx('RR'), I_TM = idx('TM'), I_TN = idx('TN'), I_TX = idx('TX'), I_GEL = idx('NBJGELEE');
+    I_RR = idx('RR'), I_TM = idx('TM'), I_TN = idx('TN'), I_TX = idx('TX'), I_GEL = idx('NBJGELEE'),
+    I_TNAB = idx('TNAB'), I_TXAB = idx('TXAB');
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i]; if (!line) continue;
     const c = line.split(';'); const ym = c[I_YM]; if (!ym || ym.length < 6) continue;
@@ -87,16 +89,21 @@ function parseAndIndex(csv: string): Map<string, StationAgg> {
         rr: Array.from({ length: 12 }, () => []), tm: Array.from({ length: 12 }, () => []),
         tn: Array.from({ length: 12 }, () => []), tx: Array.from({ length: 12 }, () => []),
         gel: Array.from({ length: 12 }, () => []),
+        tnab: Array.from({ length: 12 }, () => []), txab: Array.from({ length: 12 }, () => []),
       };
       stations.set(id, s);
     }
     const num = (r: string) => { if (!r) return; const n = parseFloat(r); return isFinite(n) ? n : undefined; };
     const rr = num(c[I_RR]), tm = num(c[I_TM]), tn = num(c[I_TN]), tx = num(c[I_TX]), gel = num(c[I_GEL]);
+    const tnab = I_TNAB >= 0 ? num(c[I_TNAB]) : undefined;
+    const txab = I_TXAB >= 0 ? num(c[I_TXAB]) : undefined;
     if (rr !== undefined) s.rr[month].push(rr);
     if (tm !== undefined) s.tm[month].push(tm);
     if (tn !== undefined) s.tn[month].push(tn);
     if (tx !== undefined) s.tx[month].push(tx);
     if (gel !== undefined) s.gel[month].push(gel);
+    if (tnab !== undefined) s.tnab[month].push(tnab);
+    if (txab !== undefined) s.txab[month].push(txab);
   }
   return stations;
 }
@@ -105,19 +112,29 @@ const mean = (a: number[]) => a.length ? a.reduce((p, c) => p + c, 0) / a.length
 const r1 = (v: number | null) => v == null ? null : Math.round(v * 10) / 10;
 
 function aggregateStation(s: StationAgg, lat: number, lon: number) {
-  const monthly = Array.from({ length: 12 }, (_, m) => ({
-    month: m + 1,
-    rrTotal: r1(mean(s.rr[m])) ?? 0,
-    tMean: r1(mean(s.tm[m])),
-    tMin: r1(mean(s.tn[m])),
-    tMax: r1(mean(s.tx[m])),
-    gelDays: Math.round(mean(s.gel[m]) ?? 0),
-    yearsUsed: s.rr[m].length,
-  }));
+  const monthly = Array.from({ length: 12 }, (_, m) => {
+    const tnabArr = s.tnab[m].length ? s.tnab[m] : s.tn[m];
+    const txabArr = s.txab[m].length ? s.txab[m] : s.tx[m];
+    return {
+      month: m + 1,
+      rrTotal: r1(mean(s.rr[m])) ?? 0,
+      tMean: r1(mean(s.tm[m])),
+      tMin: r1(mean(s.tn[m])),
+      tMax: r1(mean(s.tx[m])),
+      tMinAbs: tnabArr.length ? r1(Math.min(...tnabArr)) : null,
+      tMaxAbs: txabArr.length ? r1(Math.max(...txabArr)) : null,
+      gelDays: Math.round(mean(s.gel[m]) ?? 0),
+      yearsUsed: s.rr[m].length,
+    };
+  });
   const yearsUsed = Math.max(...monthly.map(m => m.yearsUsed));
+  const tMinAbsVals = monthly.map(m => m.tMinAbs).filter((v): v is number => v != null);
+  const tMaxAbsVals = monthly.map(m => m.tMaxAbs).filter((v): v is number => v != null);
   const annual = {
     rrTotal: Math.round(monthly.reduce((a, b) => a + b.rrTotal, 0) * 10) / 10,
     tMean: r1(mean(monthly.map(m => m.tMean).filter((v): v is number => v != null))) ?? 0,
+    tMinAbs: tMinAbsVals.length ? r1(Math.min(...tMinAbsVals)) : null,
+    tMaxAbs: tMaxAbsVals.length ? r1(Math.max(...tMaxAbsVals)) : null,
     gelDays: monthly.reduce((a, b) => a + b.gelDays, 0),
   };
   return {

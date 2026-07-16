@@ -12,6 +12,8 @@ interface MonthlyRow {
   tMean: number | null;
   tMin: number | null;
   tMax: number | null;
+  tMinAbs: number | null;
+  tMaxAbs: number | null;
   gelDays: number;
   yearsUsed: number;
 }
@@ -20,14 +22,9 @@ interface ClimateData {
   distanceKm: number;
   period: { startYear: number; endYear: number; yearsRequested: number; yearsUsed: number };
   monthly: MonthlyRow[];
-  annual: { rrTotal: number; tMean: number; gelDays: number };
+  annual: { rrTotal: number; tMean: number; tMinAbs: number | null; tMaxAbs: number | null; gelDays: number };
   cached?: boolean;
   cacheReason?: string;
-}
-
-function avg(nums: (number | null)[]): number | null {
-  const v = nums.filter((n): n is number => n != null);
-  return v.length ? Math.round((v.reduce((a, b) => a + b, 0) / v.length) * 10) / 10 : null;
 }
 
 const MONTHS_FR = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
@@ -114,15 +111,15 @@ export function ClimateCard({ lat, lon }: Props) {
                 <p className="font-semibold">{Math.round(data.annual.rrTotal)} mm</p>
               </div>
               <div className="bg-muted rounded-md p-2 text-center">
-                <p className="text-muted-foreground text-[10px]">T. min moy.</p>
+                <p className="text-muted-foreground text-[10px]">T. min absolue</p>
                 <p className="font-semibold text-topo-blue">
-                  {(() => { const v = avg(data.monthly.map(m => m.tMin)); return v != null ? `${v.toFixed(1)}°C` : "—"; })()}
+                  {data.annual.tMinAbs != null ? `${data.annual.tMinAbs.toFixed(1)}°C` : "—"}
                 </p>
               </div>
               <div className="bg-muted rounded-md p-2 text-center">
-                <p className="text-muted-foreground text-[10px]">T. max moy.</p>
+                <p className="text-muted-foreground text-[10px]">T. max absolue</p>
                 <p className="font-semibold text-topo-brown-dark">
-                  {(() => { const v = avg(data.monthly.map(m => m.tMax)); return v != null ? `${v.toFixed(1)}°C` : "—"; })()}
+                  {data.annual.tMaxAbs != null ? `${data.annual.tMaxAbs.toFixed(1)}°C` : "—"}
                 </p>
               </div>
               <div className="bg-muted rounded-md p-2 text-center col-span-2">
@@ -154,11 +151,11 @@ export function ClimateCard({ lat, lon }: Props) {
                           <p className="font-semibold">{MONTHS_FR[m.month - 1]}</p>
                           <p>{m.rrTotal.toFixed(1)} mm — {cls.label}</p>
                           {m.tMean != null && <p>T. moy. {m.tMean.toFixed(1)}°C</p>}
-                          {(m.tMin != null || m.tMax != null) && (
+                          {(m.tMinAbs != null || m.tMaxAbs != null) && (
                             <p>
-                              {m.tMin != null && <>min {m.tMin.toFixed(1)}°C</>}
-                              {m.tMin != null && m.tMax != null && " · "}
-                              {m.tMax != null && <>max {m.tMax.toFixed(1)}°C</>}
+                              {m.tMinAbs != null && <>min abs. {m.tMinAbs.toFixed(1)}°C</>}
+                              {m.tMinAbs != null && m.tMaxAbs != null && " · "}
+                              {m.tMaxAbs != null && <>max abs. {m.tMaxAbs.toFixed(1)}°C</>}
                             </p>
                           )}
                         </TooltipContent>
