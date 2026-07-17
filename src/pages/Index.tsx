@@ -175,7 +175,7 @@ const Index = () => {
         ? { lat: (bounds.north + bounds.south) / 2, lon: (bounds.east + bounds.west) / 2 }
         : null,
     onExportGeoJSON: () => contours && exportGeoJSON(contours),
-    onExportDXF: () => contours && exportDXF(contours),
+    onExportDXF: () => contours && exportDXF(contours, "courbes-niveaux", polygon),
     onExportKML: () => contours && exportKML(contours),
     onExportSVG: () => contours && exportSVG(contours, "courbes-niveaux", polygon),
     onExportPNG: handleExportPNG,
