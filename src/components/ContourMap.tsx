@@ -91,8 +91,9 @@ function buildExternalLayer(cfg: ExternalLayerConfig): L.Layer {
       version: cfg.version ?? "1.3.0",
       transparent: cfg.transparent ?? true,
       attribution: cfg.attribution,
+      maxNativeZoom: cfg.maxZoom ?? 19,
       maxZoom: 22,
-    });
+    } as L.WMSOptions);
   }
   const grp = L.layerGroup();
   cfg.children.forEach((c) => buildExternalLayer(c).addTo(grp));
