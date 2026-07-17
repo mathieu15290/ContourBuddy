@@ -169,6 +169,7 @@ export function ContourMap({
       center,
       zoom,
       zoomControl: true,
+      maxZoom: 22,
     });
 
     // Instancie toutes les couches externes déclarées; la synchro visibilité/opacité
