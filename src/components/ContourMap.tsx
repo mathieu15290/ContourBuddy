@@ -80,7 +80,7 @@ function buildExternalLayer(cfg: ExternalLayerConfig): L.Layer {
     return L.tileLayer(url, {
       minZoom,
       maxNativeZoom,
-      maxZoom: cfg.maxZoom ?? 19,
+      maxZoom: 22,
       attribution: cfg.attribution,
     });
   }
@@ -91,7 +91,7 @@ function buildExternalLayer(cfg: ExternalLayerConfig): L.Layer {
       version: cfg.version ?? "1.3.0",
       transparent: cfg.transparent ?? true,
       attribution: cfg.attribution,
-      maxZoom: cfg.maxZoom ?? 19,
+      maxZoom: 22,
     });
   }
   const grp = L.layerGroup();
