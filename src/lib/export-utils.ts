@@ -60,22 +60,45 @@ export function exportKML(contours: ContourResult, filename: string = "courbes-n
  * Export as DXF (simplified)
  */
 export function exportDXF(contours: ContourResult, filename: string = "courbes-niveaux") {
-  let dxf = `0\nSECTION\n2\nHEADER\n0\nENDSEC\n`;
+  // Projection locale équirectangulaire en MÈTRES centrée sur la zone.
+  // Sans ça, AutoCAD reçoit des degrés (≈ 1 unité pour ~111 km) → dessin minuscule.
+  let sumLat = 0, sumLon = 0, n = 0;
+  let minLon = Infinity, minLat = Infinity;
+  for (const line of contours.lines) {
+    for (const [lon, lat] of line.coordinates) {
+      sumLat += lat; sumLon += lon; n++;
+      if (lon < minLon) minLon = lon;
+      if (lat < minLat) minLat = lat;
+    }
+  }
+  const lat0 = n ? sumLat / n : 0;
+  const R = 6378137; // rayon terrestre (m)
+  const mPerDegLat = (Math.PI * R) / 180;
+  const mPerDegLon = mPerDegLat * Math.cos((lat0 * Math.PI) / 180);
+  // Origine locale (0,0) sur le coin SW pour avoir des coordonnées positives.
+  const project = (lon: number, lat: number): [number, number] => [
+    (lon - minLon) * mPerDegLon,
+    (lat - minLat) * mPerDegLat,
+  ];
+
+  let dxf = `0\nSECTION\n2\nHEADER\n9\n$INSUNITS\n70\n6\n9\n$MEASUREMENT\n70\n1\n0\nENDSEC\n`;
   dxf += `0\nSECTION\n2\nTABLES\n0\nENDSEC\n`;
   dxf += `0\nSECTION\n2\nENTITIES\n`;
 
   for (const line of contours.lines) {
     if (line.coordinates.length < 2) continue;
+    const layer = `${line.isMajor ? "MAJOR" : "MINOR"}_${line.elevation}`;
 
-    dxf += `0\nPOLYLINE\n8\n${line.isMajor ? "MAJOR" : "MINOR"}_${line.elevation}\n66\n1\n70\n0\n`;
-    dxf += `30\n${line.elevation}\n`;
+    dxf += `0\nPOLYLINE\n8\n${layer}\n66\n1\n70\n8\n`;
+    dxf += `10\n0\n20\n0\n30\n${line.elevation}\n`;
 
     for (const [lon, lat] of line.coordinates) {
-      dxf += `0\nVERTEX\n8\n${line.isMajor ? "MAJOR" : "MINOR"}_${line.elevation}\n`;
-      dxf += `10\n${lon}\n20\n${lat}\n30\n${line.elevation}\n`;
+      const [x, y] = project(lon, lat);
+      dxf += `0\nVERTEX\n8\n${layer}\n70\n32\n`;
+      dxf += `10\n${x.toFixed(3)}\n20\n${y.toFixed(3)}\n30\n${line.elevation}\n`;
     }
 
-    dxf += `0\nSEQEND\n`;
+    dxf += `0\nSEQEND\n8\n${layer}\n`;
   }
 
   dxf += `0\nENDSEC\n0\nEOF\n`;
