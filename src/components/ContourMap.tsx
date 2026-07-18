@@ -87,13 +87,13 @@ function buildExternalLayer(cfg: ExternalLayerConfig): L.Layer {
   if (cfg.kind === "wms") {
     return L.tileLayer.wms(cfg.url, {
       layers: cfg.layers,
+      styles: cfg.styles ?? "",
       format: cfg.format ?? "image/png",
       version: cfg.version ?? "1.3.0",
       transparent: cfg.transparent ?? true,
       attribution: cfg.attribution,
-      // Contrairement aux WMTS, un WMS n'a pas de grille de tuiles native fixe :
-      // il doit être interrogé au zoom courant pour conserver les détails en zoom profond.
-      maxZoom: 22,
+      ...(cfg.maxNativeZoom ? { maxNativeZoom: cfg.maxNativeZoom } : {}),
+      maxZoom: cfg.maxZoom ?? 22,
     } as L.WMSOptions);
   }
   const grp = L.layerGroup();
