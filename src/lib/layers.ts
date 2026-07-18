@@ -164,9 +164,10 @@ export const EXTERNAL_LAYER_CONFIGS: Partial<Record<LayerId, ExternalLayerConfig
     version: "1.3.0",
     transparent: true,
     attribution: "© INRAE — GIS Sol",
-    // Le service WMS sols ne rend plus de données en dessous d'environ 1:8 500.
-    // On demande donc la dernière échelle native fiable, puis Leaflet la surzoome.
-    maxNativeZoom: 15,
+    // Le service WMS sols retourne des tuiles transparentes dès z15.
+    // On fige donc la requête native à z14, puis Leaflet surzoome côté client
+    // pour garder la carte visible sous 1:20 000 (z15+).
+    maxNativeZoom: 14,
     maxZoom: 22,
   },
   geologie: {
