@@ -96,10 +96,12 @@ export type ExternalLayerConfig =
       kind: "wms";
       url: string;
       layers: string;
+      styles?: string;
       format?: string;
       version?: string;
       transparent?: boolean;
       attribution?: string;
+      maxNativeZoom?: number;
       maxZoom?: number;
     }
   | {
@@ -157,11 +159,15 @@ export const EXTERNAL_LAYER_CONFIGS: Partial<Record<LayerId, ExternalLayerConfig
     kind: "wms",
     url: GEOPF_WMS,
     layers: "INRA.CARTE.SOLS",
+    styles: "CARTE DES SOLS",
     format: "image/png",
     version: "1.3.0",
     transparent: true,
     attribution: "© INRAE — GIS Sol",
-    maxZoom: 15,
+    // Le service WMS sols ne rend plus de données en dessous d'environ 1:8 500.
+    // On demande donc la dernière échelle native fiable, puis Leaflet la surzoome.
+    maxNativeZoom: 15,
+    maxZoom: 22,
   },
   geologie: {
     kind: "wms",

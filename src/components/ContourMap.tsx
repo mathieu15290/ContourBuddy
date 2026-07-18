@@ -87,12 +87,13 @@ function buildExternalLayer(cfg: ExternalLayerConfig): L.Layer {
   if (cfg.kind === "wms") {
     return L.tileLayer.wms(cfg.url, {
       layers: cfg.layers,
+      styles: cfg.styles ?? "",
       format: cfg.format ?? "image/png",
       version: cfg.version ?? "1.3.0",
       transparent: cfg.transparent ?? true,
       attribution: cfg.attribution,
-      maxNativeZoom: cfg.maxZoom ?? 19,
-      maxZoom: 22,
+      ...(cfg.maxNativeZoom ? { maxNativeZoom: cfg.maxNativeZoom } : {}),
+      maxZoom: cfg.maxZoom ?? 22,
     } as L.WMSOptions);
   }
   const grp = L.layerGroup();
