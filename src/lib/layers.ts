@@ -13,6 +13,8 @@
 // Environnement (WMS Géoplateforme) :
 //   https://data.geopf.fr/wms-r?SERVICE=WMS
 //     • LANDCOVER.FORESTINVENTORY.V2            — BD Forêt V2
+// Sols (WMTS Géoplateforme) :
+//   https://data.geopf.fr/wmts?SERVICE=WMTS
 //     • INRA.CARTE.SOLS                         — Carte des sols (INRAE)
 // Géologie (WMS BRGM, sans clé) :
 //   https://geoservices.brgm.fr/geologie?SERVICE=WMS
@@ -155,21 +157,12 @@ export const EXTERNAL_LAYER_CONFIGS: Partial<Record<LayerId, ExternalLayerConfig
     attribution: "© IGN — BD Forêt V2",
     maxZoom: 19,
   },
-  sols: {
-    kind: "wms",
-    url: GEOPF_WMS,
-    layers: "INRA.CARTE.SOLS",
-    styles: "CARTE DES SOLS",
-    format: "image/png",
-    version: "1.3.0",
-    transparent: true,
+  sols: wmts("INRA.CARTE.SOLS", {
+    style: "CARTE DES SOLS",
+    matrixSet: "PM_6_16",
+    maxZoom: 16,
     attribution: "© INRAE — GIS Sol",
-    // Le service WMS sols retourne des tuiles transparentes dès z15.
-    // On fige donc la requête native à z14, puis Leaflet surzoome côté client
-    // pour garder la carte visible sous 1:20 000 (z15+).
-    maxNativeZoom: 14,
-    maxZoom: 22,
-  },
+  }),
   geologie: {
     kind: "wms",
     url: BRGM_WMS,
