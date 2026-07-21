@@ -28,7 +28,7 @@ export function exportKML(contours: ContourResult, filename: string = "courbes-n
 
   for (const line of contours.lines) {
     const coords = line.coordinates
-      .map(([lon, lat]) => `${lon},${lat},${line.elevation}`)
+      .map(([lon, lat]) => `${lon},${lat},0`)
       .join(" ");
 
     kml += `
