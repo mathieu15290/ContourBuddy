@@ -42,7 +42,8 @@ export function exportKML(contours: ContourResult, filename: string = "courbes-n
       </LineStyle>
     </Style>
     <LineString>
-      <altitudeMode>absolute</altitudeMode>
+      <altitudeMode>clampToGround</altitudeMode>
+      <tessellate>1</tessellate>
       <coordinates>${coords}</coordinates>
     </LineString>
   </Placemark>`;
