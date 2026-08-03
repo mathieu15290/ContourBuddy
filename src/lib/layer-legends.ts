@@ -1,7 +1,13 @@
 import type { LayerId } from "@/lib/layers";
 import { SLOPE_LEGEND, ASPECT_LEGEND } from "@/lib/terrain";
 
-export type LegendEntry = { color: string; label: string; pattern?: "line" | "fill" };
+export type LegendEntry = {
+  color?: string;
+  label: string;
+  pattern?: "line" | "fill";
+  /** En-tête de groupe : affiché sans pastille. */
+  heading?: boolean;
+};
 export type LegendDef = {
   title: string;
   source?: string;
