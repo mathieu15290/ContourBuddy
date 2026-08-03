@@ -903,6 +903,84 @@ export function ContourMap({
     applyOverlay("aspect", aspectOverlayRef);
   }, [layers, contours, importedTrack]);
 
+  // Interrogation de la carte des sols (UCS) au clic
+  useEffect(() => {
+    const map = leafletMapRef.current;
+    if (!map) return;
+    const solsState = layers.find((l) => l.id === "sols");
+    if (!solsState?.visible) return;
+
+    let controller: AbortController | null = null;
+    let popup: L.Popup | null = null;
+
+    const esc = (v?: string) =>
+      (v ?? "").replace(/[&<>"']/g, (c) =>
+        ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] as string)
+      );
+
+    const onClick = async (e: L.LeafletMouseEvent) => {
+      if (drawingRef.current || drawingPolygonRef.current || drawingProfileRef.current) return;
+      controller?.abort();
+      controller = new AbortController();
+      const signal = controller.signal;
+
+      popup = L.popup({ maxWidth: 300, className: "soil-popup" })
+        .setLatLng(e.latlng)
+        .setContent(`<div style="font-size:12px">Interrogation…</div>`)
+        .openOn(map);
+
+      try {
+        const info = await fetchSoilUcsAtPoint(e.latlng.lat, e.latlng.lng, signal);
+        if (signal.aborted || !popup) return;
+        if (!info) {
+          popup.setContent(
+            `<div style="font-size:12px">Aucune UCS cartographiée à ce point.</div>`
+          );
+          return;
+        }
+        const pct =
+          info.pourcent != null ? ` <span style="opacity:.7">(${info.pourcent}%)</span>` : "";
+        const meta = [
+          info.structr ? `Étude : ${esc(info.structr)}` : "",
+          info.gestnnr ? `Responsable : ${esc(info.gestnnr)}` : "",
+          info.etat ? `État : ${esc(info.etat)}` : "",
+        ]
+          .filter(Boolean)
+          .join("<br/>");
+
+        popup.setContent(
+          `<div style="font-size:12px;line-height:1.45;max-width:280px">
+            <div style="font-weight:700;margin-bottom:4px">UCS N°${esc(info.noUcs ?? "—")}</div>
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+              <span style="display:inline-block;width:12px;height:12px;border-radius:3px;border:1px solid rgba(0,0,0,.25);background:${info.color}"></span>
+              <span><strong>${esc(info.gerNom ?? "Sol dominant inconnu")}</strong>${pct}</span>
+            </div>
+            ${info.nomUcs ? `<div style="margin-bottom:6px">${esc(info.nomUcs)}</div>` : ""}
+            ${meta ? `<div style="opacity:.65;font-size:11px">${meta}</div>` : ""}
+            ${
+              info.lienGer
+                ? `<a href="${esc(info.lienGer)}" target="_blank" rel="noopener noreferrer" style="display:inline-block;margin-top:6px;font-size:11px">Fiche détaillée du sol (PDF) ↗</a>`
+                : ""
+            }
+          </div>`
+        );
+      } catch (err) {
+        if ((err as Error).name === "AbortError" || !popup) return;
+        popup.setContent(
+          `<div style="font-size:12px">Interrogation impossible (service indisponible).</div>`
+        );
+      }
+    };
+
+    map.on("click", onClick);
+    return () => {
+      map.off("click", onClick);
+      controller?.abort();
+      if (popup) map.closePopup(popup);
+      popup = null;
+    };
+  }, [layers]);
+
   // Selection ↔ viewport coherence watchdog
   useEffect(() => {
     const map = leafletMapRef.current;
