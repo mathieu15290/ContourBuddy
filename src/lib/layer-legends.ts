@@ -1,7 +1,13 @@
 import type { LayerId } from "@/lib/layers";
 import { SLOPE_LEGEND, ASPECT_LEGEND } from "@/lib/terrain";
 
-export type LegendEntry = { color: string; label: string; pattern?: "line" | "fill" };
+export type LegendEntry = {
+  color?: string;
+  label: string;
+  pattern?: "line" | "fill";
+  /** En-tête de groupe : affiché sans pastille. */
+  heading?: boolean;
+};
 export type LegendDef = {
   title: string;
   source?: string;
@@ -113,36 +119,58 @@ export const LAYER_LEGENDS: Partial<Record<LayerId, LegendDef>> = {
   },
 
   sols: {
-    title: "Grandes classes de sols (Référentiel Pédologique français)",
-    source: "INRAE — GIS Sol",
+    title: "Carte des sols — Grands Ensembles de Référence (GER)",
+    source: "INRAE / GIS Sol — Géoplateforme IGN",
     entries: [
-      // Sols à profil A/C — peu évolués
-      { color: "#d9d9d9", label: "Lithosols / Rankosols — sols très minces sur roche dure" },
-      { color: "#d9b382", label: "Régosols — sols peu évolués sur roche meuble" },
-      { color: "#c9c088", label: "Fluviosols — sols alluviaux récents (vallées)" },
-      { color: "#b8a97a", label: "Colluviosols — sols de bas de pente / colluvions" },
-      { color: "#a89968", label: "Arénosols — sols sableux (podzoliques ou non)" },
-      // Sols bruns et lessivés — climax tempéré
-      { color: "#c8a26a", label: "Brunisols — sols bruns, altération in situ (forêts tempérées)" },
-      { color: "#a67c52", label: "Luvisols — sols lessivés (argile migrée en profondeur)" },
-      { color: "#8b5e3c", label: "Néoluvisols — luvisols peu différenciés (loess)" },
-      // Sols carbonatés
-      { color: "#e6d3a3", label: "Rendosols — sols calcaires superficiels sur roche dure" },
-      { color: "#d4b98a", label: "Calcosols — sols bruns calcaires profonds" },
-      { color: "#c5a878", label: "Calcisols — sols décarbonatés en surface" },
-      // Sols hydromorphes
-      { color: "#8fa87d", label: "Rédoxisols — engorgement temporaire (taches ocre/gris)" },
-      { color: "#5f7a5a", label: "Réductisols — engorgement permanent (gley bleu-vert)" },
-      { color: "#7a5230", label: "Pélosols — sols argileux gonflants, hydromorphes" },
-      // Sols acides / podzoliques
-      { color: "#6b4a2b", label: "Alocrisols — sols bruns acides (Al échangeable)" },
-      { color: "#3d2a1a", label: "Podzosols — podzols, horizon cendreux + accumulation Fe/Al" },
-      // Sols organiques et anthropiques
-      { color: "#4d3319", label: "Histosols — sols organiques (tourbières)" },
-      { color: "#b0413e", label: "Fersialsols — sols rouges méditerranéens riches en fer" },
-      { color: "#8a6d3b", label: "Vertisols — argiles gonflantes à fentes de retrait" },
-      { color: "#9e9e9e", label: "Anthroposols — sols fortement remaniés (urbains, miniers)" },
+      { label: "Sols minéraux bruts et peu évolués", heading: true },
+      { color: "rgb(235,235,235)", label: "Lithosols" },
+      { color: "rgb(239,224,223)", label: "Régosols" },
+      { color: "rgb(150,150,150)", label: "Rankosols" },
+      { color: "rgb(234,232,208)", label: "Arénosols" },
+      { color: "rgb(202,202,202)", label: "Peyrosols" },
+
+      { label: "Sols des vallons et des vallées", heading: true },
+      { color: "rgb(187,252,93)", label: "Colluviosols" },
+      { color: "rgb(85,233,198)", label: "Fluviosols" },
+      { color: "rgb(191,255,227)", label: "Thalassosols" },
+      { color: "rgb(230,255,196)", label: "Sodisalisols" },
+
+      { label: "Sols issus de matériaux calcaires", heading: true },
+      { color: "rgb(255,218,152)", label: "Rendisols" },
+      { color: "rgb(255,188,64)", label: "Calcisols" },
+      { color: "rgb(255,253,190)", label: "Rendosols" },
+      { color: "rgb(255,252,92)", label: "Calcosols" },
+      { color: "rgb(255,188,183)", label: "Dolomitosols" },
+
+      { label: "Sols peu différenciés", heading: true },
+      { color: "rgb(194,141,65)", label: "Brunisols" },
+      { color: "rgb(122,33,21)", label: "Andosols" },
+      { color: "rgb(150,152,60)", label: "Vertisols" },
+      { color: "rgb(77,77,77)", label: "Organosols" },
+
+      { label: "Sols différenciés", heading: true },
+      { color: "rgb(244,21,37)", label: "Fersialsols" },
+      { color: "rgb(216,96,40)", label: "Néoluvisols" },
+      { color: "rgb(240,211,181)", label: "Luvisols" },
+      { color: "rgb(167,36,119)", label: "Véracrisols" },
+      { color: "rgb(245,155,251)", label: "Alocrisols" },
+      { color: "rgb(200,50,233)", label: "Podzosols" },
+
+      { label: "Sols marqués par un excès d'eau", heading: true },
+      { color: "rgb(19,70,156)", label: "Histosols" },
+      { color: "rgb(19,154,251)", label: "Réductisols" },
+      { color: "rgb(82,202,253)", label: "Rédoxisols" },
+      { color: "rgb(41,160,98)", label: "Colluviosols-Rédoxisols" },
+      { color: "rgb(166,102,75)", label: "Brunisols-Rédoxisols" },
+      { color: "rgb(188,80,74)", label: "Néoluvisols-Rédoxisols" },
+      { color: "rgb(229,190,111)", label: "Luvisols-Rédoxisols" },
+      { color: "rgb(188,153,183)", label: "Planosols" },
+      { color: "rgb(164,188,217)", label: "Pélosols" },
     ],
+    footer: {
+      label: "Légende officielle (PNG)",
+      href: "https://data.geopf.fr/annexes/ressources/legendes/INRA.CARTE.SOLS-legend.png",
+    },
   },
 
   geologie: {
