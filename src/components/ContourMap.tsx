@@ -11,6 +11,7 @@ import {
   type PolygonSelection,
 } from "@/lib/polygon-utils";
 import { renderTerrainCanvas, type TerrainGrid } from "@/lib/terrain";
+import { fetchSoilUcsAtPoint } from "@/lib/soil-info";
 
 interface HighlightPoint {
   lat: number;
