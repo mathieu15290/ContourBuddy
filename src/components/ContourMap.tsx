@@ -984,6 +984,74 @@ export function ContourMap({
     };
   }, [layers]);
 
+  // Interrogation de la carte géologique (BRGM) au clic
+  useEffect(() => {
+    const map = leafletMapRef.current;
+    if (!map) return;
+    const geoState = layers.find((l) => l.id === "geologie");
+    if (!geoState?.visible) return;
+
+    let controller: AbortController | null = null;
+    let popup: L.Popup | null = null;
+
+    const esc = (v?: string) =>
+      (v ?? "").replace(/[&<>"']/g, (c) =>
+        ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] as string)
+      );
+
+    const onClick = async (e: L.LeafletMouseEvent) => {
+      if (drawingRef.current || drawingPolygonRef.current || drawingProfileRef.current) return;
+      controller?.abort();
+      controller = new AbortController();
+      const signal = controller.signal;
+
+      popup = L.popup({ maxWidth: 300, className: "geology-popup" })
+        .setLatLng(e.latlng)
+        .setContent(`<div style="font-size:12px">Interrogation…</div>`)
+        .openOn(map);
+
+      try {
+        const info = await fetchGeologyAtPoint(e.latlng.lat, e.latlng.lng, signal);
+        if (signal.aborted || !popup) return;
+        if (!info) {
+          popup.setContent(
+            `<div style="font-size:12px">Aucune information géologique à ce point.</div>`
+          );
+          return;
+        }
+        const agro = geologyAgronomy(`${info.descr ?? ""} ${info.type ?? ""}`);
+        popup.setContent(
+          `<div style="font-size:12px;line-height:1.45;max-width:280px">
+            <div style="font-weight:700;margin-bottom:4px">Roche-mère</div>
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+              <span style="display:inline-block;width:12px;height:12px;border-radius:3px;border:1px solid rgba(0,0,0,.25);background:${info.color}"></span>
+              <span><strong>${esc(info.descr ?? info.type ?? "Lithologie inconnue")}</strong></span>
+            </div>
+            <div style="opacity:.75;margin-bottom:6px">${esc(agro.family)}</div>
+            <div style="margin-bottom:2px"><strong>Atouts :</strong> ${esc(agro.pros)}</div>
+            <div style="margin-bottom:6px"><strong>Contraintes :</strong> ${esc(agro.cons)}</div>
+            <div style="opacity:.65;font-size:11px">⚠️ Donnée au 1/1 000 000 : indicative, à vérifier sur le terrain.</div>
+            <a href="https://infoterre.brgm.fr/page/carte-geologique-france" target="_blank" rel="noopener noreferrer" style="display:inline-block;margin-top:6px;font-size:11px">Carte géologique BRGM ↗</a>
+          </div>`
+        );
+      } catch (err) {
+        if ((err as Error).name === "AbortError" || !popup) return;
+        popup.setContent(
+          `<div style="font-size:12px">Interrogation impossible (service indisponible).</div>`
+        );
+      }
+    };
+
+    map.on("click", onClick);
+    return () => {
+      map.off("click", onClick);
+      controller?.abort();
+      if (popup) map.closePopup(popup);
+      popup = null;
+    };
+  }, [layers]);
+
+
   // Selection ↔ viewport coherence watchdog
   useEffect(() => {
     const map = leafletMapRef.current;
