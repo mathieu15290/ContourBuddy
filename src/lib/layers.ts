@@ -166,13 +166,15 @@ export const EXTERNAL_LAYER_CONFIGS: Partial<Record<LayerId, ExternalLayerConfig
   geologie: {
     kind: "wms",
     url: BRGM_WMS,
-    layers: "GEOLOGIE",
+    layers: "LITHO_1M_SIMPLIFIEE",
     format: "image/png",
     version: "1.3.0",
     transparent: true,
     attribution: "© BRGM",
-    maxZoom: 19,
+    maxNativeZoom: 16,
+    maxZoom: 22,
   },
+
 };
 
 // -----------------------------------------------------------------------------

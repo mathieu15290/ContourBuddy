@@ -174,57 +174,30 @@ export const LAYER_LEGENDS: Partial<Record<LayerId, LegendDef>> = {
   },
 
   geologie: {
-    title: "Carte géologique BRGM — 1/1 000 000 à 1/50 000",
-    source: "BRGM — InfoTerre",
+    title: "Carte lithologique simplifiée",
+    source: "BRGM — carte lithologique simplifiée au 1/1 000 000",
     entries: [
-      // Quaternaire & Néogène
-      { color: "#f5e6a3", label: "Holocène — alluvions récentes, tourbes" },
-      { color: "#e6d28a", label: "Pléistocène — alluvions anciennes, loess, moraines" },
-      { color: "#d4c078", label: "Pliocène — sables, argiles, conglomérats" },
-      { color: "#b8c47a", label: "Miocène — molasses, calcaires lacustres" },
-      // Paléogène
-      { color: "#c4d9a8", label: "Oligocène — calcaires, marnes, sables" },
-      { color: "#a8d18a", label: "Éocène — calcaires grossiers, gypses, lignites" },
-      { color: "#8fc06a", label: "Paléocène — marnes & calcaires" },
-      // Crétacé
-      { color: "#7ab8c9", label: "Crétacé supérieur — craie, calcaires" },
-      { color: "#5a9db5", label: "Crétacé inférieur — marnes, grès, calcaires urgoniens" },
-      // Jurassique
-      { color: "#9a8fc7", label: "Jurassique supérieur (Malm) — calcaires récifaux" },
-      { color: "#7f73b5", label: "Jurassique moyen (Dogger) — calcaires oolithiques" },
-      { color: "#6557a3", label: "Jurassique inférieur (Lias) — marnes & calcaires" },
-      // Mésozoïque ancien
-      { color: "#c97a7a", label: "Trias — grès bigarrés, marnes irisées, calcaires" },
-      { color: "#b85c5c", label: "Permien — grès rouges, pélites, rhyolites" },
-      { color: "#a88a8a", label: "Carbonifère — schistes houillers, calcaires, grès" },
-      // Paléozoïque
-      { color: "#8a9a8a", label: "Dévonien — schistes, calcaires, grès" },
-      { color: "#7a8a8a", label: "Silurien — schistes ardoisiers, quartzites" },
-      { color: "#6a7a7a", label: "Ordovicien — grès armoricains, schistes" },
-      { color: "#5a6a6a", label: "Cambrien — schistes, grès, calcaires" },
-      // Précambrien
-      { color: "#c98a9a", label: "Protérozoïque — schistes & quartzites anciens" },
-      { color: "#b56a7a", label: "Archéen — gneiss & migmatites anciens" },
-      // Magmatiques plutoniques
-      { color: "#d98a9a", label: "Granites & granitoïdes" },
-      { color: "#c97a8a", label: "Granodiorites, diorites, monzonites" },
-      { color: "#e0a0a0", label: "Rhyolites & volcanites acides" },
-      { color: "#c48a6a", label: "Andésites & volcanites intermédiaires" },
-      { color: "#6a6a6a", label: "Basaltes & volcanites basiques" },
-      { color: "#5a6a5a", label: "Gabbros & dolérites" },
-      { color: "#4a5a4a", label: "Roches ultrabasiques (péridotites, serpentinites)" },
-      // Filons
-      { color: "#9a9a9a", label: "Filons (quartz, pegmatites, lamprophyres)" },
-      // Métamorphiques
-      { color: "#8a9a8a", label: "Schistes & micaschistes" },
-      { color: "#b0a0a0", label: "Gneiss & migmatites" },
-      { color: "#5a7a5a", label: "Amphibolites & éclogites" },
-      { color: "#d9d9d9", label: "Marbres & cipolins" },
-      { color: "#c9c9c9", label: "Quartzites" },
+      { label: "Roches sédimentaires", heading: true },
+      { color: "rgb(212,255,191)", label: "Argiles" },
+      { color: "rgb(115,178,255)", label: "Calcaires, marnes et gypse" },
+      { color: "rgb(128,255,0)", label: "Craie" },
+      { color: "rgb(245,201,122)", label: "Grès" },
+      { color: "rgb(255,255,115)", label: "Sables" },
+
+      { label: "Roches magmatiques", heading: true },
+      { color: "rgb(0,77,168)", label: "Basaltes et rhyolites" },
+      { color: "rgb(255,0,0)", label: "Granites" },
+
+      { label: "Roches métamorphiques", heading: true },
+      { color: "rgb(0,135,0)", label: "Ophiolites" },
+      { color: "rgb(255,191,232)", label: "Gneiss" },
+      { color: "rgb(255,235,191)", label: "Micaschistes" },
+      { color: "rgb(138,138,69)", label: "Schistes et grès" },
     ],
     footer: {
-      label: "Légende officielle BRGM (lithologie)",
-      href: "https://infoterre.brgm.fr/page/cartes-geologiques",
+      label: "Carte géologique de la France (BRGM)",
+      href: "https://infoterre.brgm.fr/page/carte-geologique-france",
     },
   },
+
 };
