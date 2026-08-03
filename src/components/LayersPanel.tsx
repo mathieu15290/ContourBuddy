@@ -38,22 +38,31 @@ function InlineLegend({ def }: { def: LegendDef }) {
         </div>
       )}
       <ul className="space-y-1 max-h-48 overflow-y-auto pr-1">
-        {def.entries.map((e, i) => (
-          <li key={i} className="flex items-center gap-2 text-[11px] text-foreground/90">
-            {e.pattern === "line" ? (
-              <span
-                className="inline-block w-3 h-[2px] rounded-sm shrink-0"
-                style={{ background: e.color }}
-              />
-            ) : (
-              <span
-                className="inline-block w-3 h-2 rounded-sm border border-border/50 shrink-0"
-                style={{ background: e.color }}
-              />
-            )}
-            <span className="truncate">{e.label}</span>
-          </li>
-        ))}
+        {def.entries.map((e, i) =>
+          e.heading ? (
+            <li
+              key={i}
+              className="pt-1.5 first:pt-0 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground"
+            >
+              {e.label}
+            </li>
+          ) : (
+            <li key={i} className="flex items-center gap-2 text-[11px] text-foreground/90">
+              {e.pattern === "line" ? (
+                <span
+                  className="inline-block w-3 h-[2px] rounded-sm shrink-0"
+                  style={{ background: e.color }}
+                />
+              ) : (
+                <span
+                  className="inline-block w-3 h-2 rounded-sm border border-border/50 shrink-0"
+                  style={{ background: e.color }}
+                />
+              )}
+              <span className="truncate">{e.label}</span>
+            </li>
+          )
+        )}
       </ul>
       {def.footer && (
         <a
