@@ -143,7 +143,10 @@ function LayerRow({
           >
             <BookOpen className="h-3 w-3" />
             <span>
-              Légende{legend.entries.length ? ` (${legend.entries.length})` : ""}
+              Légende
+              {legend.entries.filter((e) => !e.heading).length
+                ? ` (${legend.entries.filter((e) => !e.heading).length})`
+                : ""}
             </span>
             <ChevronDown
               className={cn(
