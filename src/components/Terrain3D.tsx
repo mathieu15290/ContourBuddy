@@ -278,10 +278,12 @@ function FlowOverlay({
   grid,
   flowLines,
   exaggeration,
+  flowRender,
 }: {
   grid: ElevationGrid;
   flowLines: FlowLine[];
   exaggeration: number;
+  flowRender: FlowRenderStyle;
 }) {
   const proj = useMemo(() => makeProjector(grid), [grid]);
   const paths = useMemo(
@@ -295,17 +297,33 @@ function FlowOverlay({
     [flowLines, proj, exaggeration]
   );
 
-  const lines = useMemo(
-    () =>
-      paths.map(
-        (p) =>
-          new THREE.Line(
-            new THREE.BufferGeometry().setFromPoints(p),
-            new THREE.LineBasicMaterial({ color: "#2b7fd4", transparent: true, opacity: 0.9 })
-          )
-      ),
-    [paths]
-  );
+  const { kind, width, speed } = flowRender;
+
+  const lines = useMemo(() => {
+    if (kind === "dots") return [];
+    const mat =
+      kind === "dashes"
+        ? new THREE.LineDashedMaterial({
+            color: "#2b7fd4",
+            dashSize: Math.max(4, width * 4),
+            gapSize: Math.max(4, width * 4),
+            transparent: true,
+            opacity: 0.9,
+            linewidth: Math.min(4, Math.max(1, width)),
+          })
+        : new THREE.LineBasicMaterial({
+            color: "#2b7fd4",
+            transparent: true,
+            opacity: 0.9,
+            linewidth: Math.min(4, Math.max(1, width)),
+          });
+    return paths.map((p) => {
+      const geo = new THREE.BufferGeometry().setFromPoints(p);
+      const line = new THREE.Line(geo, mat.clone());
+      if (kind === "dashes") line.computeLineDistances();
+      return line;
+    });
+  }, [paths, kind, width]);
 
   useEffect(
     () => () => lines.forEach((l) => { l.geometry.dispose(); (l.material as THREE.Material).dispose(); }),
@@ -324,7 +342,7 @@ function FlowOverlay({
     for (let i = 0; i < count; i++) {
       const p = paths[i];
       if (!p || p.length < 2) continue;
-      const f = ((t * 0.18 + i * 0.137) % 1) * (p.length - 1);
+      const f = ((t * 0.18 * Math.max(0, speed) + i * 0.137) % 1) * (p.length - 1);
       const i0 = Math.floor(f);
       const v = p[i0].clone().lerp(p[Math.min(i0 + 1, p.length - 1)], f - i0);
       dummy.position.copy(v);
@@ -334,6 +352,11 @@ function FlowOverlay({
     mesh.instanceMatrix.needsUpdate = true;
   });
 
+  const dotRadius = useMemo(
+    () => Math.max(2, (proj.widthM / 400) * width),
+    [proj.widthM, width]
+  );
+
   return (
     <group>
       {lines.map((l, i) => (
@@ -341,7 +364,7 @@ function FlowOverlay({
       ))}
       {count > 0 && (
         <instancedMesh ref={dotsRef} args={[undefined as never, undefined as never, count]}>
-          <sphereGeometry args={[Math.max(2, proj.widthM / 400), 8, 8]} />
+          <sphereGeometry args={[dotRadius, 8, 8]} />
           <meshBasicMaterial color="#8fd0ff" />
         </instancedMesh>
       )}
