@@ -421,6 +421,83 @@ function CameraRig({ radius }: { radius: number }) {
   return null;
 }
 
+function Flow3DControls({
+  flowRender,
+  onChange,
+}: {
+  flowRender: FlowRenderStyle;
+  onChange: (patch: Partial<FlowRenderStyle>) => void;
+}) {
+  const kinds: { id: FlowRenderStyle["kind"]; label: string }[] = [
+    { id: "dots", label: "Points" },
+    { id: "dashes", label: "Pointillés" },
+    { id: "solid", label: "Ligne" },
+  ];
+  const speed = flowRender.speed ?? 1;
+  return (
+    <div className="mt-1.5 pt-1.5 border-t border-border/60 space-y-2">
+      <div>
+        <div className="flex items-center justify-between text-[11px] text-muted-foreground mb-1">
+          <span>Densité</span>
+          <span className="tabular-nums">×{flowRender.density.toFixed(1)}</span>
+        </div>
+        <Slider
+          value={[flowRender.density]}
+          min={0.4}
+          max={3}
+          step={0.1}
+          onValueChange={(v) => onChange({ density: v[0] })}
+        />
+      </div>
+      <div>
+        <div className="flex items-center justify-between text-[11px] text-muted-foreground mb-1">
+          <span>Épaisseur</span>
+          <span className="tabular-nums">×{flowRender.width.toFixed(1)}</span>
+        </div>
+        <Slider
+          value={[flowRender.width]}
+          min={0.4}
+          max={3}
+          step={0.1}
+          onValueChange={(v) => onChange({ width: v[0] })}
+        />
+      </div>
+      <div>
+        <div className="flex items-center justify-between text-[11px] text-muted-foreground mb-1">
+          <span>Rapidité</span>
+          <span className="tabular-nums">{speed === 0 ? "figé" : `×${speed.toFixed(1)}`}</span>
+        </div>
+        <Slider
+          value={[speed]}
+          min={0}
+          max={3}
+          step={0.1}
+          onValueChange={(v) => onChange({ speed: v[0] })}
+        />
+      </div>
+      <div>
+        <div className="text-[11px] text-muted-foreground mb-1">Nature du trait</div>
+        <div className="grid grid-cols-3 gap-1">
+          {kinds.map((k) => (
+            <button
+              key={k.id}
+              onClick={() => onChange({ kind: k.id })}
+              className={cn(
+                "text-[11px] rounded-md border px-1 py-1 transition-colors",
+                flowRender.kind === k.id
+                  ? "border-primary bg-primary/15 text-primary"
+                  : "border-border text-muted-foreground hover:bg-muted"
+              )}
+            >
+              {k.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // -----------------------------------------------------------------------------
 export function Terrain3D({
   open,
