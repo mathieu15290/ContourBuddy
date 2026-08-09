@@ -545,11 +545,15 @@ export function Terrain3D({
                 </div>
               )}
 
-              <div className="absolute top-3 left-3 flex flex-col gap-1.5 bg-card/90 backdrop-blur-sm border border-border rounded-lg p-2.5 shadow-lg text-sm">
+              <div className="absolute top-3 left-3 flex flex-col gap-1.5 bg-card/90 backdrop-blur-sm border border-border rounded-lg p-2.5 shadow-lg text-sm max-w-[16rem]">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input type="checkbox" checked={showFlow} onChange={(e) => setShowFlow(e.target.checked)} />
-                  💧 Écoulement d'eau
+                  <Droplets className="h-3.5 w-3.5 text-sky-500" />
+                  <span className="flex-1">Écoulement d'eau</span>
                 </label>
+                {showFlow && onFlowRenderChange && (
+                  <Flow3DControls flowRender={flowRender ?? DEFAULT_FLOW_RENDER} onChange={onFlowRenderChange} />
+                )}
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input type="checkbox" checked={showContours} onChange={(e) => setShowContours(e.target.checked)} />
                   ⛰️ Courbes de niveaux
