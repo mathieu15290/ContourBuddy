@@ -333,14 +333,25 @@ function FlowOverlay({
   // Pastilles animées descendant le long de chaque chemin
   const dotsRef = useRef<THREE.InstancedMesh>(null);
   const dummy = useMemo(() => new THREE.Object3D(), []);
-  const count = Math.min(paths.length, 400);
+  // Cap élevé : si trop de chemins, on échantillonne régulièrement au lieu
+  // de ne garder que les 400 premiers (sinon des pans entiers disparaissaient).
+  const MAX_DOTS = 4000;
+  const dotPaths = useMemo(() => {
+    const usable = paths.filter((p) => p.length >= 2);
+    if (usable.length <= MAX_DOTS) return usable;
+    const step = usable.length / MAX_DOTS;
+    const out: THREE.Vector3[][] = [];
+    for (let i = 0; i < MAX_DOTS; i++) out.push(usable[Math.floor(i * step)]);
+    return out;
+  }, [paths]);
+  const count = dotPaths.length;
 
   useFrame(({ clock }) => {
     const mesh = dotsRef.current;
     if (!mesh || !count) return;
     const t = clock.getElapsedTime();
     for (let i = 0; i < count; i++) {
-      const p = paths[i];
+      const p = dotPaths[i];
       if (!p || p.length < 2) continue;
       const f = ((t * 0.18 * Math.max(0, speed) + i * 0.137) % 1) * (p.length - 1);
       const i0 = Math.floor(f);
@@ -351,6 +362,7 @@ function FlowOverlay({
     }
     mesh.instanceMatrix.needsUpdate = true;
   });
+
 
   const dotRadius = useMemo(
     () => Math.max(2, (proj.widthM / 400) * width),
