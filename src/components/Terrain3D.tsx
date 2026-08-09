@@ -24,6 +24,7 @@ interface Props {
   flowLines: FlowLine[];
   exaggeration: number;
   basemap: Basemap3D;
+  onBasemapChange?: (b: Basemap3D) => void;
   markers?: Marker3D[];
 }
 
@@ -401,6 +402,7 @@ export function Terrain3D({
   flowLines,
   exaggeration,
   basemap,
+  onBasemapChange,
   markers = [],
 }: Props) {
   const [texture, setTexture] = useState<THREE.CanvasTexture | null>(null);
@@ -488,6 +490,29 @@ export function Terrain3D({
                   maxDistance={radius * 4}
                 />
               </Canvas>
+
+              {onBasemapChange && (
+                <div className="absolute top-3 right-3 flex gap-1 bg-card/90 backdrop-blur-sm border border-border rounded-lg p-1 shadow-lg">
+                  {([
+                    { id: "satellite", label: "Photo aérienne" },
+                    { id: "plan", label: "Plan IGN" },
+                    { id: "none", label: "Relief" },
+                  ] as { id: Basemap3D; label: string }[]).map((b) => (
+                    <button
+                      key={b.id}
+                      onClick={() => onBasemapChange(b.id)}
+                      className={
+                        "rounded-md px-2.5 py-1.5 text-xs transition-colors " +
+                        (basemap === b.id
+                          ? "bg-primary text-primary-foreground"
+                          : "text-muted-foreground hover:bg-muted")
+                      }
+                    >
+                      {b.label}
+                    </button>
+                  ))}
+                </div>
+              )}
 
               <div className="absolute top-3 left-3 flex flex-col gap-1.5 bg-card/90 backdrop-blur-sm border border-border rounded-lg p-2.5 shadow-lg text-sm">
                 <label className="flex items-center gap-2 cursor-pointer">

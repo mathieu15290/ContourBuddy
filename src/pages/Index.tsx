@@ -362,6 +362,7 @@ const Index = () => {
         flowLines={flowLines}
         exaggeration={exaggeration}
         basemap={basemap3d}
+        onBasemapChange={setBasemap3d}
         markers={markers3D}
       />
     </div>
