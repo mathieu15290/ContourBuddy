@@ -35,6 +35,7 @@ export type LayerId =
   | "natura2000"
   | "znieff"
   | "hydro"
+  | "flow"
   | "sols"
   | "geologie";
 
@@ -196,6 +197,7 @@ export const DEFAULT_LAYERS: LayerState[] = [
 
   // — Eau —
   { id: "hydro", label: "Hydrographie (BD TOPO)", section: "eau", visible: false, opacity: 0.7 },
+  { id: "flow",  label: "💧 Écoulement d'eau",     section: "eau", visible: false, opacity: 0.85 },
 
   // — Bâti & cadastre —
   { id: "cadastre", label: "Cadastre", section: "bati", visible: false, opacity: 0.7 },
