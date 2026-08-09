@@ -849,7 +849,7 @@ export function ContourMap({
     }
 
     if (!map.hasLayer(group)) group.addTo(map);
-    group.bringToFront();
+    group.eachLayer((l) => (l as L.Polyline).bringToFront?.());
   }, [flowLines, flowRender, layers, polygonInfo]);
 
 
