@@ -491,17 +491,31 @@ export function Terrain3D({
   const [showFlow, setShowFlow] = useState(true);
   const [showMarkers, setShowMarkers] = useState(true);
   const [showContours, setShowContours] = useState(true);
+  const [showOverlays, setShowOverlays] = useState(true);
+
+  // Calques thématiques actifs dans le panneau 2D et drapables en 3D.
+  const overlays = useMemo<Drape3DLayer[]>(() => {
+    if (!showOverlays || !layers) return [];
+    return [...layers]
+      .reverse()
+      .filter((l) => l.visible && l.section !== "fonds" && EXTERNAL_LAYER_CONFIGS[l.id])
+      .map((l) => ({ config: EXTERNAL_LAYER_CONFIGS[l.id]!, opacity: l.opacity }));
+  }, [layers, showOverlays]);
+
+  const overlayKey = overlays.map((o, i) => `${i}:${o.opacity}`).join("|");
 
   useEffect(() => {
-    // Toute texture précédente est périmée dès que le fond ou la zone change.
+    // Toute texture précédente est périmée dès que le fond, les calques ou la zone changent.
     setTexture(null);
-    if (!open || !grid || basemap === "none") return;
+    if (!open || !grid) return;
+    if (basemap === "none" && overlays.length === 0) return;
     const ctrl = new AbortController();
     setLoadingTex(true);
-    buildBasemapTexture(grid, basemap, ctrl.signal)
+    buildDrapeTexture(grid, basemap, overlays, ctrl.signal)
       .then((tex) => {
         if (!ctrl.signal.aborted) setTexture(tex);
       })
+      .catch(() => {})
       .finally(() => {
         if (!ctrl.signal.aborted) setLoadingTex(false);
       });
@@ -509,7 +523,9 @@ export function Terrain3D({
       ctrl.abort();
       setLoadingTex(false);
     };
-  }, [open, grid, basemap]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, grid, basemap, overlayKey]);
+
 
   useEffect(() => () => texture?.dispose(), [texture]);
 
