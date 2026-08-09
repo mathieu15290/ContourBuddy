@@ -11,6 +11,7 @@ import {
   type PolygonSelection,
 } from "@/lib/polygon-utils";
 import { renderTerrainCanvas, type TerrainGrid } from "@/lib/terrain";
+import { smoothFlowPoints, flowDashArray, DEFAULT_FLOW_RENDER, type FlowLine, type FlowRenderStyle } from "@/lib/flow";
 import { fetchSoilUcsAtPoint } from "@/lib/soil-info";
 import { fetchGeologyAtPoint, geologyAgronomy } from "@/lib/geology-info";
 
@@ -37,6 +38,8 @@ interface Props {
   layers: LayerState[];
   onPolygonChanged?: (polygon: PolygonSelection | null) => void;
   terrain?: TerrainGrid | null;
+  flowLines?: FlowLine[];
+  flowRender?: FlowRenderStyle;
 }
 
 const POLY_COLOR = "hsl(152, 45%, 28%)";
@@ -128,9 +131,12 @@ export function ContourMap({
   layers = [],
   onPolygonChanged,
   terrain = null,
+  flowLines = [],
+  flowRender = DEFAULT_FLOW_RENDER,
 }: Props) {
   const leafletMapRef = useRef<L.Map | null>(null);
   const contourLayerRef = useRef<L.LayerGroup | null>(null);
+  const flowLayerRef = useRef<L.LayerGroup | null>(null);
   const externalLayersRef = useRef<Partial<Record<LayerId, L.Layer>>>({});
   const slopeOverlayRef = useRef<L.ImageOverlay | null>(null);
   const aspectOverlayRef = useRef<L.ImageOverlay | null>(null);
