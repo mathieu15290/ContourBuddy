@@ -10,7 +10,7 @@ import { smoothFlowPoints, type FlowLine, type FlowRenderStyle, DEFAULT_FLOW_REN
 import { Loader2, Droplets } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type Basemap3D = "satellite" | "plan" | "none";
+export type Basemap3D = "satellite" | "plan" | "lidar" | "none";
 
 export interface Marker3D {
   lat: number;
@@ -59,9 +59,19 @@ function makeProjector(grid: ElevationGrid) {
 // -----------------------------------------------------------------------------
 // Mosaïque de tuiles WMTS IGN → CanvasTexture
 // -----------------------------------------------------------------------------
-const TILE_LAYERS: Record<Exclude<Basemap3D, "none">, { layer: string; format: string; ext: string }> = {
+const TILE_LAYERS: Record<
+  Exclude<Basemap3D, "none">,
+  { layer: string; format: string; ext: string; matrixSet?: string; maxZoom?: number }
+> = {
   satellite: { layer: "ORTHOIMAGERY.ORTHOPHOTOS", format: "image/jpeg", ext: "jpeg" },
   plan: { layer: "GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2", format: "image/png", ext: "png" },
+  lidar: {
+    layer: "IGNF_LIDAR-HD_MNT_ELEVATION.ELEVATIONGRIDCOVERAGE.SHADOW",
+    format: "image/png",
+    ext: "png",
+    matrixSet: "PM_0_18",
+    maxZoom: 18,
+  },
 };
 
 const lon2x = (lon: number, z: number) => ((lon + 180) / 360) * Math.pow(2, z);
@@ -80,8 +90,9 @@ async function buildBasemapTexture(
   const MAX_TILES = 400;
 
   // Choix du zoom : viser ~1400–2500 px de large, puis rétrograder si trop de tuiles.
-  let zoom = 19;
-  for (let z = 8; z <= 19; z++) {
+  const zMax = cfg.maxZoom ?? 19;
+  let zoom = zMax;
+  for (let z = 8; z <= zMax; z++) {
     const px = (lon2x(grid.maxLon, z) - lon2x(grid.minLon, z)) * TILE;
     if (px >= 1400) {
       zoom = px > 2500 ? Math.max(8, z - 1) : z;
@@ -89,6 +100,7 @@ async function buildBasemapTexture(
     }
     zoom = z;
   }
+
 
   let x0 = 0, x1 = 0, y0 = 0, y1 = 0;
   while (zoom > 5) {
@@ -111,25 +123,70 @@ async function buildBasemapTexture(
   mctx.fillStyle = "#9db38a";
   mctx.fillRect(0, 0, mosaic.width, mosaic.height);
 
-  const loadTile = (x: number, y: number) =>
-    new Promise<void>((resolve) => {
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.onload = () => {
-        if (!signal.aborted) mctx.drawImage(img, (x - x0) * TILE, (y - y0) * TILE, TILE, TILE);
-        resolve();
-      };
-      img.onerror = () => resolve();
-      img.src =
-        `https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0` +
-        `&LAYER=${encodeURIComponent(cfg.layer)}&STYLE=normal&FORMAT=${encodeURIComponent(cfg.format)}` +
-        `&TILEMATRIXSET=PM&TILEMATRIX=${zoom}&TILEROW=${y}&TILECOL=${x}`;
-    });
+  let drawn = 0;
 
-  const jobs: Promise<void>[] = [];
-  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) jobs.push(loadTile(x, y));
-  await Promise.all(jobs);
+  const tileUrl = (x: number, y: number, bust?: number) =>
+    `https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0` +
+    `&LAYER=${encodeURIComponent(cfg.layer)}&STYLE=normal&FORMAT=${encodeURIComponent(cfg.format)}` +
+    `&TILEMATRIXSET=${cfg.matrixSet ?? "PM"}&TILEMATRIX=${zoom}&TILEROW=${y}&TILECOL=${x}` +
+    // Clé de cache distincte de celle des tuiles Leaflet (chargées sans CORS) :
+    // sinon la première requête 3D réutilise une entrée sans en-têtes CORS et échoue.
+    `&_ctx=3d${bust ? `&_r=${bust}` : ""}`;
+
+  const sleep = (ms: number) =>
+    new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+  const fetchTile = async (x: number, y: number, bust?: number) => {
+    const res = await fetch(tileUrl(x, y, bust), { mode: "cors", signal });
+    if (!res.ok) {
+      const err = new Error(String(res.status)) as Error & { status?: number };
+      err.status = res.status;
+      throw err;
+    }
+    const blob = await res.blob();
+    const bmp = await createImageBitmap(blob);
+    if (!signal.aborted) {
+      mctx.drawImage(bmp, (x - x0) * TILE, (y - y0) * TILE, TILE, TILE);
+      drawn++;
+    }
+    bmp.close?.();
+  };
+
+  // Le service IGN limite le débit (HTTP 429) : on plafonne la concurrence
+  // et on retente avec un délai croissant, sinon toutes les tuiles échouent
+  // et le fond de plan retombe sur le rendu hypsométrique.
+  const loadTile = async (x: number, y: number) => {
+    for (let attempt = 0; attempt < 4; attempt++) {
+      if (signal.aborted) return;
+      try {
+        await fetchTile(x, y, attempt > 1 ? Date.now() : undefined);
+        return;
+      } catch (e) {
+        const status = (e as { status?: number }).status;
+        if (signal.aborted) return;
+        if (status === 404 || status === 400) return;
+        await sleep(300 * Math.pow(2, attempt) + Math.random() * 250);
+      }
+    }
+  };
+
+  const queue: [number, number][] = [];
+  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) queue.push([x, y]);
+
+  const CONCURRENCY = 6;
+  let cursor = 0;
+  const worker = async () => {
+    while (cursor < queue.length && !signal.aborted) {
+      const [x, y] = queue[cursor++];
+      await loadTile(x, y);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(CONCURRENCY, queue.length) }, worker));
   if (signal.aborted) return null;
+  // Aucune tuile récupérée : on laisse le rendu hypsométrique plutôt qu'un aplat.
+  if (drawn === 0) return null;
+
+
 
   // Recadrage exact sur la bbox
   const px0 = (lon2x(grid.minLon, zoom) - x0) * TILE;
@@ -218,11 +275,20 @@ function TerrainMesh({
 
   return (
     <mesh geometry={geometry} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+      {/* La clé force la recréation du matériau : ajouter/retirer une map sur un
+          matériau déjà compilé ne déclenche pas de recompilation du shader. */}
       {texture ? (
-        <meshStandardMaterial map={texture} roughness={0.95} metalness={0} />
+        <meshStandardMaterial
+          key={texture.uuid}
+          map={texture}
+          vertexColors={false}
+          roughness={0.95}
+          metalness={0}
+        />
       ) : (
-        <meshStandardMaterial vertexColors roughness={0.95} metalness={0} />
+        <meshStandardMaterial key="hypso" vertexColors roughness={0.95} metalness={0} />
       )}
+
     </mesh>
   );
 }
@@ -333,14 +399,25 @@ function FlowOverlay({
   // Pastilles animées descendant le long de chaque chemin
   const dotsRef = useRef<THREE.InstancedMesh>(null);
   const dummy = useMemo(() => new THREE.Object3D(), []);
-  const count = Math.min(paths.length, 400);
+  // Cap élevé : si trop de chemins, on échantillonne régulièrement au lieu
+  // de ne garder que les 400 premiers (sinon des pans entiers disparaissaient).
+  const MAX_DOTS = 4000;
+  const dotPaths = useMemo(() => {
+    const usable = paths.filter((p) => p.length >= 2);
+    if (usable.length <= MAX_DOTS) return usable;
+    const step = usable.length / MAX_DOTS;
+    const out: THREE.Vector3[][] = [];
+    for (let i = 0; i < MAX_DOTS; i++) out.push(usable[Math.floor(i * step)]);
+    return out;
+  }, [paths]);
+  const count = dotPaths.length;
 
   useFrame(({ clock }) => {
     const mesh = dotsRef.current;
     if (!mesh || !count) return;
     const t = clock.getElapsedTime();
     for (let i = 0; i < count; i++) {
-      const p = paths[i];
+      const p = dotPaths[i];
       if (!p || p.length < 2) continue;
       const f = ((t * 0.18 * Math.max(0, speed) + i * 0.137) % 1) * (p.length - 1);
       const i0 = Math.floor(f);
@@ -351,6 +428,7 @@ function FlowOverlay({
     }
     mesh.instanceMatrix.needsUpdate = true;
   });
+
 
   const dotRadius = useMemo(
     () => Math.max(2, (proj.widthM / 400) * width),
@@ -604,6 +682,7 @@ export function Terrain3D({
                   {([
                     { id: "satellite", label: "Photo aérienne" },
                     { id: "plan", label: "Plan IGN" },
+                    { id: "lidar", label: "LIDAR HD" },
                     { id: "none", label: "Relief" },
                   ] as { id: Basemap3D; label: string }[]).map((b) => (
                     <button
