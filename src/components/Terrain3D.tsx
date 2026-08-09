@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls, Html } from "@react-three/drei";
 import * as THREE from "three";
+import { Slider } from "@/components/ui/slider";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { ElevationGrid } from "@/lib/elevation";
 import type { ContourResult } from "@/lib/contours";
@@ -23,6 +24,7 @@ interface Props {
   contours: ContourResult | null;
   flowLines: FlowLine[];
   exaggeration: number;
+  onExaggerationChange?: (v: number) => void;
   basemap: Basemap3D;
   onBasemapChange?: (b: Basemap3D) => void;
   markers?: Marker3D[];
@@ -401,6 +403,7 @@ export function Terrain3D({
   contours,
   flowLines,
   exaggeration,
+  onExaggerationChange,
   basemap,
   onBasemapChange,
   markers = [],
@@ -528,6 +531,22 @@ export function Terrain3D({
                   📌 Marqueurs
                 </label>
               </div>
+
+              {onExaggerationChange && (
+                <div className="absolute bottom-3 left-3 w-56 bg-card/90 backdrop-blur-sm border border-border rounded-lg p-2.5 shadow-lg">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-xs font-medium text-foreground">Exagération verticale</span>
+                    <span className="text-xs text-muted-foreground tabular-nums">×{exaggeration.toFixed(1)}</span>
+                  </div>
+                  <Slider
+                    value={[exaggeration]}
+                    min={1}
+                    max={5}
+                    step={0.1}
+                    onValueChange={(v) => onExaggerationChange(v[0])}
+                  />
+                </div>
+              )}
 
               {loadingTex && (
                 <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-card/90 border border-border rounded-md px-3 py-1.5 text-xs text-muted-foreground shadow">

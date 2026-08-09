@@ -32,9 +32,10 @@ function FlowControls({
 }) {
   const kinds: { id: FlowRenderStyle["kind"]; label: string }[] = [
     { id: "dots", label: "Points" },
-    { id: "dashes", label: "Tirets" },
-    { id: "solid", label: "Continu" },
+    { id: "dashes", label: "Pointillés" },
+    { id: "solid", label: "Ligne continue" },
   ];
+  const speed = flowRender.speed ?? 1;
   return (
     <div className="mt-2 space-y-2 rounded-md border border-border/60 bg-background/60 p-2">
       <div>
@@ -63,25 +64,42 @@ function FlowControls({
           onValueChange={(v) => onChange({ width: v[0] })}
         />
       </div>
-      <div className="grid grid-cols-3 gap-1">
-        {kinds.map((k) => (
-          <button
-            key={k.id}
-            onClick={() => onChange({ kind: k.id })}
-            className={cn(
-              "text-[11px] rounded-md border px-1.5 py-1 transition-colors",
-              flowRender.kind === k.id
-                ? "border-primary bg-primary/15 text-primary"
-                : "border-border text-muted-foreground hover:bg-muted"
-            )}
-          >
-            {k.label}
-          </button>
-        ))}
+      <div>
+        <div className="flex items-center justify-between text-[11px] text-muted-foreground mb-1">
+          <span>Rapidité</span>
+          <span className="tabular-nums">{speed === 0 ? "figé" : `×${speed.toFixed(1)}`}</span>
+        </div>
+        <Slider
+          value={[speed]}
+          min={0}
+          max={3}
+          step={0.1}
+          onValueChange={(v) => onChange({ speed: v[0] })}
+        />
+      </div>
+      <div>
+        <div className="text-[11px] text-muted-foreground mb-1">Nature du trait</div>
+        <div className="grid grid-cols-3 gap-1">
+          {kinds.map((k) => (
+            <button
+              key={k.id}
+              onClick={() => onChange({ kind: k.id })}
+              className={cn(
+                "text-[11px] rounded-md border px-1.5 py-1 transition-colors",
+                flowRender.kind === k.id
+                  ? "border-primary bg-primary/15 text-primary"
+                  : "border-border text-muted-foreground hover:bg-muted"
+              )}
+            >
+              {k.label}
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );
 }
+
 
 // Empêche tout événement pointeur/clavier de fuir vers la carte Leaflet.
 const stopMapEvents = {
@@ -314,7 +332,7 @@ export function LayersPanel({ layers, onChange, flowRender, onFlowRenderChange }
 
   return (
     <div
-      className="absolute top-3 right-3 z-[5000] flex items-start gap-2"
+      className="absolute top-3 right-3 z-[1000] flex items-start gap-2"
       {...stopMapEvents}
     >
       {open && (

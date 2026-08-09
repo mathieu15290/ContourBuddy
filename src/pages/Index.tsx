@@ -211,10 +211,6 @@ const Index = () => {
     onExportPNG: handleExportPNG,
     has3D: !!grid,
     onOpen3D: () => setOpen3D(true),
-    exaggeration,
-    onExaggerationChange: setExaggeration,
-    basemap3d,
-    onBasemap3DChange: setBasemap3d,
   };
 
   return (
@@ -361,6 +357,7 @@ const Index = () => {
         contours={contours}
         flowLines={flowLines}
         exaggeration={exaggeration}
+        onExaggerationChange={setExaggeration}
         basemap={basemap3d}
         onBasemapChange={setBasemap3d}
         markers={markers3D}
