@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { OrbitControls, Sky, Html } from "@react-three/drei";
+import { OrbitControls, Html } from "@react-three/drei";
 import * as THREE from "three";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { ElevationGrid } from "@/lib/elevation";
@@ -464,19 +464,23 @@ export function Terrain3D({
                 gl={{ antialias: true, powerPreference: "high-performance" }}
               >
                 <CameraRig radius={radius} />
-                <Sky sunPosition={[100, 40, 100]} />
+                <color attach="background" args={["#cfdeee"]} />
                 <ambientLight intensity={0.7} />
                 <directionalLight position={[radius, radius, radius * 0.6]} intensity={1.1} />
-                <TerrainMesh grid={grid} exaggeration={exaggeration} texture={texture} />
-                {showContours && contours && (
-                  <ContourOverlay grid={grid} contours={contours} exaggeration={exaggeration} />
-                )}
-                {showFlow && flowLines.length > 0 && (
-                  <FlowOverlay grid={grid} flowLines={flowLines} exaggeration={exaggeration} />
-                )}
-                {showMarkers && markers.length > 0 && (
-                  <MarkersOverlay grid={grid} markers={markers} exaggeration={exaggeration} />
-                )}
+                {/* Le terrain est recentré autour de y = 0 : les altitudes absolues
+                    (plusieurs centaines de mètres) sortiraient sinon du champ de la caméra. */}
+                <group position={[0, -grid.minElev * exaggeration, 0]}>
+                  <TerrainMesh grid={grid} exaggeration={exaggeration} texture={texture} />
+                  {showContours && contours && (
+                    <ContourOverlay grid={grid} contours={contours} exaggeration={exaggeration} />
+                  )}
+                  {showFlow && flowLines.length > 0 && (
+                    <FlowOverlay grid={grid} flowLines={flowLines} exaggeration={exaggeration} />
+                  )}
+                  {showMarkers && markers.length > 0 && (
+                    <MarkersOverlay grid={grid} markers={markers} exaggeration={exaggeration} />
+                  )}
+                </group>
                 <OrbitControls
                   enableDamping
                   maxPolarAngle={Math.PI / 2.05}
