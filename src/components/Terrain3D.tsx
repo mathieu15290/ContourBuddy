@@ -627,6 +627,10 @@ export function Terrain3D({
                   <input type="checkbox" checked={showMarkers} onChange={(e) => setShowMarkers(e.target.checked)} />
                   📌 Marqueurs
                 </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={showOverlays} onChange={(e) => setShowOverlays(e.target.checked)} />
+                  🗂️ Calques actifs ({overlays.length})
+                </label>
               </div>
 
               {loadingTex && (
