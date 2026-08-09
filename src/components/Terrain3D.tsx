@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import type { ElevationGrid } from "@/lib/elevation";
 import type { ContourResult } from "@/lib/contours";
 import { smoothFlowPoints, type FlowLine } from "@/lib/flow";
+import { EXTERNAL_LAYER_CONFIGS, type ExternalLayerConfig, type LayerState } from "@/lib/layers";
 import { Loader2 } from "lucide-react";
 
 export type Basemap3D = "satellite" | "plan" | "none";
