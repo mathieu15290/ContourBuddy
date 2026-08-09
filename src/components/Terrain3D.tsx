@@ -152,6 +152,9 @@ async function buildBasemapTexture(
   for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) jobs.push(loadTile(x, y));
   await Promise.all(jobs);
   if (signal.aborted) return null;
+  // Aucune tuile récupérée : on laisse le rendu hypsométrique plutôt qu'un aplat.
+  if (drawn === 0) return null;
+
 
   // Recadrage exact sur la bbox
   const px0 = (lon2x(grid.minLon, zoom) - x0) * TILE;
