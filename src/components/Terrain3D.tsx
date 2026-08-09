@@ -128,7 +128,7 @@ async function buildBasemapTexture(
   const tileUrl = (x: number, y: number, bust?: number) =>
     `https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0` +
     `&LAYER=${encodeURIComponent(cfg.layer)}&STYLE=normal&FORMAT=${encodeURIComponent(cfg.format)}` +
-    `&TILEMATRIXSET=PM&TILEMATRIX=${zoom}&TILEROW=${y}&TILECOL=${x}` +
+    `&TILEMATRIXSET=${cfg.matrixSet ?? "PM"}&TILEMATRIX=${zoom}&TILEROW=${y}&TILECOL=${x}` +
     // Clé de cache distincte de celle des tuiles Leaflet (chargées sans CORS) :
     // sinon la première requête 3D réutilise une entrée sans en-têtes CORS et échoue.
     `&_ctx=3d${bust ? `&_r=${bust}` : ""}`;
