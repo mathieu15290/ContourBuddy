@@ -364,7 +364,6 @@ const Index = () => {
         basemap={basemap3d}
         onBasemapChange={setBasemap3d}
         markers={markers3D}
-        layers={layers}
       />
     </div>
   );

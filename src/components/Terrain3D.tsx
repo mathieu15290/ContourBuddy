@@ -6,7 +6,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import type { ElevationGrid } from "@/lib/elevation";
 import type { ContourResult } from "@/lib/contours";
 import { smoothFlowPoints, type FlowLine } from "@/lib/flow";
-import { EXTERNAL_LAYER_CONFIGS, type ExternalLayerConfig, type LayerState } from "@/lib/layers";
 import { Loader2 } from "lucide-react";
 
 export type Basemap3D = "satellite" | "plan" | "none";
@@ -27,8 +26,6 @@ interface Props {
   basemap: Basemap3D;
   onBasemapChange?: (b: Basemap3D) => void;
   markers?: Marker3D[];
-  /** Calques du panneau 2D, drapés sur le terrain en 3D. */
-  layers?: LayerState[];
 }
 
 const MAX_SEGMENTS = 250;
@@ -55,16 +52,12 @@ function makeProjector(grid: ElevationGrid) {
 }
 
 // -----------------------------------------------------------------------------
-// Mosaïque de tuiles (WMTS / WMS) → CanvasTexture drapée sur le terrain
+// Mosaïque de tuiles WMTS IGN → CanvasTexture
 // -----------------------------------------------------------------------------
-const TILE_LAYERS: Record<Exclude<Basemap3D, "none">, ExternalLayerConfig> = {
-  satellite: EXTERNAL_LAYER_CONFIGS.satellite as ExternalLayerConfig,
-  plan: EXTERNAL_LAYER_CONFIGS.plan as ExternalLayerConfig,
+const TILE_LAYERS: Record<Exclude<Basemap3D, "none">, { layer: string; format: string; ext: string }> = {
+  satellite: { layer: "ORTHOIMAGERY.ORTHOPHOTOS", format: "image/jpeg", ext: "jpeg" },
+  plan: { layer: "GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2", format: "image/png", ext: "png" },
 };
-
-const TILE = 256;
-const MAX_TILES = 400;
-const ORIGIN = 20037508.342789244;
 
 const lon2x = (lon: number, z: number) => ((lon + 180) / 360) * Math.pow(2, z);
 const lat2y = (lat: number, z: number) => {
@@ -72,48 +65,34 @@ const lat2y = (lat: number, z: number) => {
   return ((1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2) * Math.pow(2, z);
 };
 
-function tileUrl(cfg: Exclude<ExternalLayerConfig, { kind: "group" }>, z: number, x: number, y: number): string {
-  if (cfg.kind === "wmts") {
-    return (
-      `${cfg.url}?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0` +
-      `&LAYER=${encodeURIComponent(cfg.layer)}&STYLE=${encodeURIComponent(cfg.style ?? "normal")}` +
-      `&FORMAT=${encodeURIComponent(cfg.format ?? "image/png")}` +
-      `&TILEMATRIXSET=${encodeURIComponent(cfg.matrixSet ?? "PM")}&TILEMATRIX=${z}&TILEROW=${y}&TILECOL=${x}`
-    );
-  }
-  const res = (2 * ORIGIN) / (TILE * Math.pow(2, z));
-  const minX = -ORIGIN + x * TILE * res;
-  const maxX = minX + TILE * res;
-  const maxY = ORIGIN - y * TILE * res;
-  const minY = maxY - TILE * res;
-  const version = cfg.version ?? "1.3.0";
-  const bbox = version === "1.3.0" ? `${minX},${minY},${maxX},${maxY}` : `${minX},${minY},${maxX},${maxY}`;
-  return (
-    `${cfg.url}?SERVICE=WMS&REQUEST=GetMap&VERSION=${version}` +
-    `&LAYERS=${encodeURIComponent(cfg.layers)}&STYLES=${encodeURIComponent(cfg.styles ?? "")}` +
-    `&FORMAT=${encodeURIComponent(cfg.format ?? "image/png")}&TRANSPARENT=${cfg.transparent === false ? "FALSE" : "TRUE"}` +
-    `&${version === "1.3.0" ? "CRS" : "SRS"}=EPSG:3857&BBOX=${bbox}&WIDTH=${TILE}&HEIGHT=${TILE}`
-  );
-}
-
-/** Rend une couche (une seule source) sur un canvas recadré exactement sur la bbox de la grille. */
-async function renderSource(
-  cfg: Exclude<ExternalLayerConfig, { kind: "group" }>,
+async function buildBasemapTexture(
   grid: ElevationGrid,
-  targetZoom: number,
-  outW: number,
-  outH: number,
+  basemap: Exclude<Basemap3D, "none">,
   signal: AbortSignal
-): Promise<HTMLCanvasElement | null> {
-  const nativeMax = (cfg.kind === "wms" ? cfg.maxNativeZoom ?? 19 : cfg.maxZoom ?? 19);
-  let zoom = Math.min(targetZoom, nativeMax);
+): Promise<THREE.CanvasTexture | null> {
+  const cfg = TILE_LAYERS[basemap];
+  const TILE = 256;
+  const MAX_TILES = 400;
+
+  // Choix du zoom : viser ~1400–2500 px de large, puis rétrograder si trop de tuiles.
+  let zoom = 19;
+  for (let z = 8; z <= 19; z++) {
+    const px = (lon2x(grid.maxLon, z) - lon2x(grid.minLon, z)) * TILE;
+    if (px >= 1400) {
+      zoom = px > 2500 ? Math.max(8, z - 1) : z;
+      break;
+    }
+    zoom = z;
+  }
+
   let x0 = 0, x1 = 0, y0 = 0, y1 = 0;
   while (zoom > 5) {
     x0 = Math.floor(lon2x(grid.minLon, zoom));
     x1 = Math.floor(lon2x(grid.maxLon, zoom));
     y0 = Math.floor(lat2y(grid.maxLat, zoom));
     y1 = Math.floor(lat2y(grid.minLat, zoom));
-    if ((x1 - x0 + 1) * (y1 - y0 + 1) <= MAX_TILES) break;
+    const count = (x1 - x0 + 1) * (y1 - y0 + 1);
+    if (count <= MAX_TILES) break;
     zoom -= 1;
   }
 
@@ -124,6 +103,8 @@ async function renderSource(
   mosaic.height = rows * TILE;
   const mctx = mosaic.getContext("2d");
   if (!mctx) return null;
+  mctx.fillStyle = "#9db38a";
+  mctx.fillRect(0, 0, mosaic.width, mosaic.height);
 
   const loadTile = (x: number, y: number) =>
     new Promise<void>((resolve) => {
@@ -134,7 +115,10 @@ async function renderSource(
         resolve();
       };
       img.onerror = () => resolve();
-      img.src = tileUrl(cfg, zoom, x, y);
+      img.src =
+        `https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0` +
+        `&LAYER=${encodeURIComponent(cfg.layer)}&STYLE=normal&FORMAT=${encodeURIComponent(cfg.format)}` +
+        `&TILEMATRIXSET=PM&TILEMATRIX=${zoom}&TILEROW=${y}&TILECOL=${x}`;
     });
 
   const jobs: Promise<void>[] = [];
@@ -142,90 +126,23 @@ async function renderSource(
   await Promise.all(jobs);
   if (signal.aborted) return null;
 
+  // Recadrage exact sur la bbox
   const px0 = (lon2x(grid.minLon, zoom) - x0) * TILE;
   const px1 = (lon2x(grid.maxLon, zoom) - x0) * TILE;
   const py0 = (lat2y(grid.maxLat, zoom) - y0) * TILE;
   const py1 = (lat2y(grid.minLat, zoom) - y0) * TILE;
-
   const out = document.createElement("canvas");
-  out.width = outW;
-  out.height = outH;
+  out.width = Math.max(2, Math.round(px1 - px0));
+  out.height = Math.max(2, Math.round(py1 - py0));
   const octx = out.getContext("2d");
   if (!octx) return null;
-  octx.imageSmoothingQuality = "high";
-  octx.drawImage(mosaic, px0, py0, Math.max(1, px1 - px0), Math.max(1, py1 - py0), 0, 0, outW, outH);
-  return out;
-}
-
-export interface Drape3DLayer {
-  config: ExternalLayerConfig;
-  opacity: number;
-}
-
-/** Compose le fond + les calques thématiques actifs en une seule texture. */
-async function buildDrapeTexture(
-  grid: ElevationGrid,
-  base: Basemap3D,
-  overlays: Drape3DLayer[],
-  signal: AbortSignal
-): Promise<THREE.CanvasTexture | null> {
-  // Zoom cible : viser ~1400–2500 px de large.
-  let targetZoom = 19;
-  for (let z = 8; z <= 19; z++) {
-    const px = (lon2x(grid.maxLon, z) - lon2x(grid.minLon, z)) * TILE;
-    targetZoom = z;
-    if (px >= 1400) {
-      targetZoom = px > 2500 ? Math.max(8, z - 1) : z;
-      break;
-    }
-  }
-
-  const outW = Math.max(
-    64,
-    Math.min(4096, Math.round((lon2x(grid.maxLon, targetZoom) - lon2x(grid.minLon, targetZoom)) * TILE))
-  );
-  const outH = Math.max(
-    64,
-    Math.min(4096, Math.round((lat2y(grid.minLat, targetZoom) - lat2y(grid.maxLat, targetZoom)) * TILE))
-  );
-
-  const out = document.createElement("canvas");
-  out.width = outW;
-  out.height = outH;
-  const octx = out.getContext("2d");
-  if (!octx) return null;
-  octx.fillStyle = "#9db38a";
-  octx.fillRect(0, 0, outW, outH);
-
-  const sources: { cfg: Exclude<ExternalLayerConfig, { kind: "group" }>; opacity: number }[] = [];
-  if (base !== "none") sources.push({ cfg: TILE_LAYERS[base] as never, opacity: 1 });
-  for (const o of overlays) {
-    if (o.config.kind === "group") {
-      for (const child of o.config.children) {
-        sources.push({ cfg: child as never, opacity: o.opacity });
-      }
-    } else {
-      sources.push({ cfg: o.config as never, opacity: o.opacity });
-    }
-  }
-  if (!sources.length) return null;
-
-  for (const s of sources) {
-    if (signal.aborted) return null;
-    const layerCanvas = await renderSource(s.cfg, grid, targetZoom, outW, outH, signal);
-    if (!layerCanvas) continue;
-    octx.globalAlpha = Math.max(0, Math.min(1, s.opacity));
-    octx.drawImage(layerCanvas, 0, 0);
-    octx.globalAlpha = 1;
-  }
-  if (signal.aborted) return null;
+  octx.drawImage(mosaic, px0, py0, px1 - px0, py1 - py0, 0, 0, out.width, out.height);
 
   const tex = new THREE.CanvasTexture(out);
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.anisotropy = 4;
   return tex;
 }
-
 
 // -----------------------------------------------------------------------------
 // Maillage du terrain
@@ -487,38 +404,23 @@ export function Terrain3D({
   basemap,
   onBasemapChange,
   markers = [],
-  layers,
 }: Props) {
   const [texture, setTexture] = useState<THREE.CanvasTexture | null>(null);
   const [loadingTex, setLoadingTex] = useState(false);
   const [showFlow, setShowFlow] = useState(true);
   const [showMarkers, setShowMarkers] = useState(true);
   const [showContours, setShowContours] = useState(true);
-  const [showOverlays, setShowOverlays] = useState(true);
-
-  // Calques thématiques actifs dans le panneau 2D et drapables en 3D.
-  const overlays = useMemo<Drape3DLayer[]>(() => {
-    if (!showOverlays || !layers) return [];
-    return [...layers]
-      .reverse()
-      .filter((l) => l.visible && l.section !== "fonds" && EXTERNAL_LAYER_CONFIGS[l.id])
-      .map((l) => ({ config: EXTERNAL_LAYER_CONFIGS[l.id]!, opacity: l.opacity }));
-  }, [layers, showOverlays]);
-
-  const overlayKey = overlays.map((o, i) => `${i}:${o.opacity}`).join("|");
 
   useEffect(() => {
-    // Toute texture précédente est périmée dès que le fond, les calques ou la zone changent.
+    // Toute texture précédente est périmée dès que le fond ou la zone change.
     setTexture(null);
-    if (!open || !grid) return;
-    if (basemap === "none" && overlays.length === 0) return;
+    if (!open || !grid || basemap === "none") return;
     const ctrl = new AbortController();
     setLoadingTex(true);
-    buildDrapeTexture(grid, basemap, overlays, ctrl.signal)
+    buildBasemapTexture(grid, basemap, ctrl.signal)
       .then((tex) => {
         if (!ctrl.signal.aborted) setTexture(tex);
       })
-      .catch(() => {})
       .finally(() => {
         if (!ctrl.signal.aborted) setLoadingTex(false);
       });
@@ -526,9 +428,7 @@ export function Terrain3D({
       ctrl.abort();
       setLoadingTex(false);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, grid, basemap, overlayKey]);
-
+  }, [open, grid, basemap]);
 
   useEffect(() => () => texture?.dispose(), [texture]);
 
@@ -626,10 +526,6 @@ export function Terrain3D({
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input type="checkbox" checked={showMarkers} onChange={(e) => setShowMarkers(e.target.checked)} />
                   📌 Marqueurs
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" checked={showOverlays} onChange={(e) => setShowOverlays(e.target.checked)} />
-                  🗂️ Calques actifs ({overlays.length})
                 </label>
               </div>
 
