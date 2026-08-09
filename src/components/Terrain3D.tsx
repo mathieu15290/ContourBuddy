@@ -596,7 +596,6 @@ export function Terrain3D({
     setLoadingTex(true);
     buildBasemapTexture(grid, basemap, ctrl.signal)
       .then((tex) => {
-        console.log("[3D] tex", basemap, !!tex, ctrl.signal.aborted);
         if (!ctrl.signal.aborted) setTexture(tex);
       })
       .finally(() => {
