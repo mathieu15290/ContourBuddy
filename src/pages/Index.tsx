@@ -356,6 +356,8 @@ const Index = () => {
         grid={grid}
         contours={contours}
         flowLines={flowLines}
+        flowRender={flowRender}
+        onFlowRenderChange={(patch) => setFlowRender((prev) => ({ ...prev, ...patch }))}
         exaggeration={exaggeration}
         onExaggerationChange={setExaggeration}
         basemap={basemap3d}
