@@ -14,10 +14,73 @@ import type { LayerState, LayerId, LayerSection } from "@/lib/layers";
 import { SECTION_META, SECTION_ORDER } from "@/lib/layers";
 import { LAYER_LEGENDS, type LegendDef } from "@/lib/layer-legends";
 import { cn } from "@/lib/utils";
+import { DEFAULT_FLOW_RENDER, type FlowRenderStyle } from "@/lib/flow";
 
 interface Props {
   layers: LayerState[];
   onChange: (id: LayerId, patch: Partial<LayerState>) => void;
+  flowRender?: FlowRenderStyle;
+  onFlowRenderChange?: (patch: Partial<FlowRenderStyle>) => void;
+}
+
+function FlowControls({
+  flowRender,
+  onChange,
+}: {
+  flowRender: FlowRenderStyle;
+  onChange: (patch: Partial<FlowRenderStyle>) => void;
+}) {
+  const kinds: { id: FlowRenderStyle["kind"]; label: string }[] = [
+    { id: "dots", label: "Points" },
+    { id: "dashes", label: "Tirets" },
+    { id: "solid", label: "Continu" },
+  ];
+  return (
+    <div className="mt-2 space-y-2 rounded-md border border-border/60 bg-background/60 p-2">
+      <div>
+        <div className="flex items-center justify-between text-[11px] text-muted-foreground mb-1">
+          <span>Densité</span>
+          <span className="tabular-nums">×{flowRender.density.toFixed(1)}</span>
+        </div>
+        <Slider
+          value={[flowRender.density]}
+          min={0.4}
+          max={3}
+          step={0.1}
+          onValueChange={(v) => onChange({ density: v[0] })}
+        />
+      </div>
+      <div>
+        <div className="flex items-center justify-between text-[11px] text-muted-foreground mb-1">
+          <span>Épaisseur</span>
+          <span className="tabular-nums">×{flowRender.width.toFixed(1)}</span>
+        </div>
+        <Slider
+          value={[flowRender.width]}
+          min={0.4}
+          max={3}
+          step={0.1}
+          onValueChange={(v) => onChange({ width: v[0] })}
+        />
+      </div>
+      <div className="grid grid-cols-3 gap-1">
+        {kinds.map((k) => (
+          <button
+            key={k.id}
+            onClick={() => onChange({ kind: k.id })}
+            className={cn(
+              "text-[11px] rounded-md border px-1.5 py-1 transition-colors",
+              flowRender.kind === k.id
+                ? "border-primary bg-primary/15 text-primary"
+                : "border-border text-muted-foreground hover:bg-muted"
+            )}
+          >
+            {k.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 // Empêche tout événement pointeur/clavier de fuir vers la carte Leaflet.
@@ -81,9 +144,13 @@ function InlineLegend({ def }: { def: LegendDef }) {
 function LayerRow({
   layer,
   onChange,
+  flowRender,
+  onFlowRenderChange,
 }: {
   layer: LayerState;
   onChange: (id: LayerId, patch: Partial<LayerState>) => void;
+  flowRender?: FlowRenderStyle;
+  onFlowRenderChange?: (patch: Partial<FlowRenderStyle>) => void;
 }) {
   const [legendOpen, setLegendOpen] = useState(false);
   const legend = LAYER_LEGENDS[layer.id];
@@ -135,6 +202,13 @@ function LayerRow({
         </div>
       )}
 
+      {layer.id === "flow" && layer.visible && onFlowRenderChange && (
+        <FlowControls
+          flowRender={flowRender ?? DEFAULT_FLOW_RENDER}
+          onChange={onFlowRenderChange}
+        />
+      )}
+
       {legend && (
         <>
           <button
@@ -166,10 +240,14 @@ function SectionBlock({
   section,
   items,
   onChange,
+  flowRender,
+  onFlowRenderChange,
 }: {
   section: LayerSection;
   items: LayerState[];
   onChange: (id: LayerId, patch: Partial<LayerState>) => void;
+  flowRender?: FlowRenderStyle;
+  onFlowRenderChange?: (patch: Partial<FlowRenderStyle>) => void;
 }) {
   const [open, setOpen] = useState(true);
   const meta = SECTION_META[section];
@@ -204,7 +282,13 @@ function SectionBlock({
       {open && (
         <ul className="p-2 pt-1 space-y-1">
           {items.map((layer) => (
-            <LayerRow key={layer.id} layer={layer} onChange={onChange} />
+            <LayerRow
+              key={layer.id}
+              layer={layer}
+              onChange={onChange}
+              flowRender={flowRender}
+              onFlowRenderChange={onFlowRenderChange}
+            />
           ))}
         </ul>
       )}
@@ -212,7 +296,7 @@ function SectionBlock({
   );
 }
 
-export function LayersPanel({ layers, onChange }: Props) {
+export function LayersPanel({ layers, onChange, flowRender, onFlowRenderChange }: Props) {
   const [open, setOpen] = useState(true);
 
   const grouped = useMemo(() => {
@@ -262,6 +346,8 @@ export function LayersPanel({ layers, onChange }: Props) {
                   section={section}
                   items={items}
                   onChange={onChange}
+                  flowRender={flowRender}
+                  onFlowRenderChange={onFlowRenderChange}
                 />
               );
             })}
