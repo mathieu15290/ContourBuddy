@@ -90,8 +90,9 @@ async function buildBasemapTexture(
   const MAX_TILES = 400;
 
   // Choix du zoom : viser ~1400–2500 px de large, puis rétrograder si trop de tuiles.
-  let zoom = 19;
-  for (let z = 8; z <= 19; z++) {
+  const zMax = cfg.maxZoom ?? 19;
+  let zoom = zMax;
+  for (let z = 8; z <= zMax; z++) {
     const px = (lon2x(grid.maxLon, z) - lon2x(grid.minLon, z)) * TILE;
     if (px >= 1400) {
       zoom = px > 2500 ? Math.max(8, z - 1) : z;
@@ -99,6 +100,7 @@ async function buildBasemapTexture(
     }
     zoom = z;
   }
+
 
   let x0 = 0, x1 = 0, y0 = 0, y1 = 0;
   while (zoom > 5) {
