@@ -849,7 +849,16 @@ export function ContourMap({
     }
 
     if (!map.hasLayer(group)) group.addTo(map);
-    group.eachLayer((l) => (l as L.Polyline).bringToFront?.());
+    group.eachLayer((l) => {
+      const poly = l as L.Polyline;
+      poly.bringToFront?.();
+      const el = poly.getElement?.() as SVGElement | null;
+      if (el) {
+        const sp = flowRender.speed ?? 1;
+        el.style.animationDuration = sp > 0 ? `${(2.4 / sp).toFixed(2)}s` : "0s";
+        el.style.animationPlayState = sp > 0 ? "running" : "paused";
+      }
+    });
   }, [flowLines, flowRender, layers, polygonInfo]);
 
 

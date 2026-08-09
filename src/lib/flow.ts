@@ -30,12 +30,15 @@ export interface FlowRenderStyle {
   density: number;
   width: number;
   kind: "dots" | "dashes" | "solid";
+  /** Vitesse d'animation du sens d'écoulement (×). 0 = figé. */
+  speed: number;
 }
 
 export const DEFAULT_FLOW_RENDER: FlowRenderStyle = {
   density: 1,
   width: 1,
   kind: "dots",
+  speed: 1,
 };
 
 /** Pas de semis par défaut pour une grille donnée. */

@@ -314,7 +314,7 @@ export function LayersPanel({ layers, onChange, flowRender, onFlowRenderChange }
 
   return (
     <div
-      className="absolute top-3 right-3 z-[5000] flex items-start gap-2"
+      className="absolute top-3 right-3 z-[1000] flex items-start gap-2"
       {...stopMapEvents}
     >
       {open && (
