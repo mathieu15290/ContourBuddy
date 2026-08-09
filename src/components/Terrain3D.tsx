@@ -10,7 +10,7 @@ import { smoothFlowPoints, type FlowLine, type FlowRenderStyle, DEFAULT_FLOW_REN
 import { Loader2, Droplets } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type Basemap3D = "satellite" | "plan" | "none";
+export type Basemap3D = "satellite" | "plan" | "lidar" | "none";
 
 export interface Marker3D {
   lat: number;
