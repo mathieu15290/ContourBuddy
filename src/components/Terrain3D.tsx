@@ -59,9 +59,19 @@ function makeProjector(grid: ElevationGrid) {
 // -----------------------------------------------------------------------------
 // Mosaïque de tuiles WMTS IGN → CanvasTexture
 // -----------------------------------------------------------------------------
-const TILE_LAYERS: Record<Exclude<Basemap3D, "none">, { layer: string; format: string; ext: string }> = {
+const TILE_LAYERS: Record<
+  Exclude<Basemap3D, "none">,
+  { layer: string; format: string; ext: string; matrixSet?: string; maxZoom?: number }
+> = {
   satellite: { layer: "ORTHOIMAGERY.ORTHOPHOTOS", format: "image/jpeg", ext: "jpeg" },
   plan: { layer: "GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2", format: "image/png", ext: "png" },
+  lidar: {
+    layer: "IGNF_LIDAR-HD_MNT_ELEVATION.ELEVATIONGRIDCOVERAGE.SHADOW",
+    format: "image/png",
+    ext: "png",
+    matrixSet: "PM_0_18",
+    maxZoom: 18,
+  },
 };
 
 const lon2x = (lon: number, z: number) => ((lon + 180) / 360) * Math.pow(2, z);
