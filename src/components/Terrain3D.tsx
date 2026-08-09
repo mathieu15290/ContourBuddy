@@ -10,7 +10,7 @@ import { smoothFlowPoints, type FlowLine, type FlowRenderStyle, DEFAULT_FLOW_REN
 import { Loader2, Droplets } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type Basemap3D = "satellite" | "plan" | "none";
+export type Basemap3D = "satellite" | "plan" | "lidar" | "none";
 
 export interface Marker3D {
   lat: number;
@@ -59,9 +59,19 @@ function makeProjector(grid: ElevationGrid) {
 // -----------------------------------------------------------------------------
 // Mosaïque de tuiles WMTS IGN → CanvasTexture
 // -----------------------------------------------------------------------------
-const TILE_LAYERS: Record<Exclude<Basemap3D, "none">, { layer: string; format: string; ext: string }> = {
+const TILE_LAYERS: Record<
+  Exclude<Basemap3D, "none">,
+  { layer: string; format: string; ext: string; matrixSet?: string; maxZoom?: number }
+> = {
   satellite: { layer: "ORTHOIMAGERY.ORTHOPHOTOS", format: "image/jpeg", ext: "jpeg" },
   plan: { layer: "GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2", format: "image/png", ext: "png" },
+  lidar: {
+    layer: "IGNF_LIDAR-HD_MNT_ELEVATION.ELEVATIONGRIDCOVERAGE.SHADOW",
+    format: "image/png",
+    ext: "png",
+    matrixSet: "PM_0_18",
+    maxZoom: 18,
+  },
 };
 
 const lon2x = (lon: number, z: number) => ((lon + 180) / 360) * Math.pow(2, z);
@@ -80,8 +90,9 @@ async function buildBasemapTexture(
   const MAX_TILES = 400;
 
   // Choix du zoom : viser ~1400–2500 px de large, puis rétrograder si trop de tuiles.
-  let zoom = 19;
-  for (let z = 8; z <= 19; z++) {
+  const zMax = cfg.maxZoom ?? 19;
+  let zoom = zMax;
+  for (let z = 8; z <= zMax; z++) {
     const px = (lon2x(grid.maxLon, z) - lon2x(grid.minLon, z)) * TILE;
     if (px >= 1400) {
       zoom = px > 2500 ? Math.max(8, z - 1) : z;
@@ -89,6 +100,7 @@ async function buildBasemapTexture(
     }
     zoom = z;
   }
+
 
   let x0 = 0, x1 = 0, y0 = 0, y1 = 0;
   while (zoom > 5) {
@@ -116,7 +128,7 @@ async function buildBasemapTexture(
   const tileUrl = (x: number, y: number, bust?: number) =>
     `https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0` +
     `&LAYER=${encodeURIComponent(cfg.layer)}&STYLE=normal&FORMAT=${encodeURIComponent(cfg.format)}` +
-    `&TILEMATRIXSET=PM&TILEMATRIX=${zoom}&TILEROW=${y}&TILECOL=${x}` +
+    `&TILEMATRIXSET=${cfg.matrixSet ?? "PM"}&TILEMATRIX=${zoom}&TILEROW=${y}&TILECOL=${x}` +
     // Clé de cache distincte de celle des tuiles Leaflet (chargées sans CORS) :
     // sinon la première requête 3D réutilise une entrée sans en-têtes CORS et échoue.
     `&_ctx=3d${bust ? `&_r=${bust}` : ""}`;
@@ -641,6 +653,7 @@ export function Terrain3D({
                   {([
                     { id: "satellite", label: "Photo aérienne" },
                     { id: "plan", label: "Plan IGN" },
+                    { id: "lidar", label: "LIDAR HD" },
                     { id: "none", label: "Relief" },
                   ] as { id: Basemap3D; label: string }[]).map((b) => (
                     <button
