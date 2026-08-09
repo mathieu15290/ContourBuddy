@@ -428,6 +428,8 @@ export function Terrain3D({
   grid,
   contours,
   flowLines,
+  flowRender,
+  onFlowRenderChange,
   exaggeration,
   onExaggerationChange,
   basemap,
