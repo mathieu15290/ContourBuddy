@@ -133,9 +133,16 @@ async function buildBasemapTexture(
     // sinon la première requête 3D réutilise une entrée sans en-têtes CORS et échoue.
     `&_ctx=3d${bust ? `&_r=${bust}` : ""}`;
 
+  const sleep = (ms: number) =>
+    new Promise<void>((resolve) => setTimeout(resolve, ms));
+
   const fetchTile = async (x: number, y: number, bust?: number) => {
     const res = await fetch(tileUrl(x, y, bust), { mode: "cors", signal });
-    if (!res.ok) throw new Error(String(res.status));
+    if (!res.ok) {
+      const err = new Error(String(res.status)) as Error & { status?: number };
+      err.status = res.status;
+      throw err;
+    }
     const blob = await res.blob();
     const bmp = await createImageBitmap(blob);
     if (!signal.aborted) {
@@ -145,27 +152,40 @@ async function buildBasemapTexture(
     bmp.close?.();
   };
 
+  // Le service IGN limite le débit (HTTP 429) : on plafonne la concurrence
+  // et on retente avec un délai croissant, sinon toutes les tuiles échouent
+  // et le fond de plan retombe sur le rendu hypsométrique.
   const loadTile = async (x: number, y: number) => {
-    try {
-      await fetchTile(x, y);
-    } catch {
+    for (let attempt = 0; attempt < 4; attempt++) {
       if (signal.aborted) return;
-      // Nouvelle tentative en contournant tout cache défectueux.
       try {
-        await fetchTile(x, y, Date.now());
-      } catch {
-        /* tuile manquante : le fond de secours reste visible */
+        await fetchTile(x, y, attempt > 1 ? Date.now() : undefined);
+        return;
+      } catch (e) {
+        const status = (e as { status?: number }).status;
+        if (signal.aborted) return;
+        if (status === 404 || status === 400) return;
+        await sleep(300 * Math.pow(2, attempt) + Math.random() * 250);
       }
     }
   };
 
+  const queue: [number, number][] = [];
+  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) queue.push([x, y]);
 
-  const jobs: Promise<void>[] = [];
-  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) jobs.push(loadTile(x, y));
-  await Promise.all(jobs);
+  const CONCURRENCY = 6;
+  let cursor = 0;
+  const worker = async () => {
+    while (cursor < queue.length && !signal.aborted) {
+      const [x, y] = queue[cursor++];
+      await loadTile(x, y);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(CONCURRENCY, queue.length) }, worker));
   if (signal.aborted) return null;
   // Aucune tuile récupérée : on laisse le rendu hypsométrique plutôt qu'un aplat.
   if (drawn === 0) return null;
+
 
 
   // Recadrage exact sur la bbox
