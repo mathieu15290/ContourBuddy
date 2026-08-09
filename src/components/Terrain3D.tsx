@@ -508,7 +508,7 @@ export function Terrain3D({
                     <ContourOverlay grid={grid} contours={contours} exaggeration={exaggeration} />
                   )}
                   {showFlow && flowLines.length > 0 && (
-                    <FlowOverlay grid={grid} flowLines={flowLines} exaggeration={exaggeration} />
+                    <FlowOverlay grid={grid} flowLines={flowLines} exaggeration={exaggeration} flowRender={flowRender ?? DEFAULT_FLOW_RENDER} />
                   )}
                   {showMarkers && markers.length > 0 && (
                     <MarkersOverlay grid={grid} markers={markers} exaggeration={exaggeration} />
