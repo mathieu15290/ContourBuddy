@@ -16,10 +16,13 @@ import {
   Globe,
   Loader2,
   Shapes,
+  Box,
 } from "lucide-react";
 import type { ContourResult } from "@/lib/contours";
 import logo from "@/assets/logo.png";
 import { ClimateCard } from "@/components/ClimateCard";
+import { Slider } from "@/components/ui/slider";
+import type { Basemap3D } from "@/components/Terrain3D";
 
 interface Props {
   interval: number;
@@ -38,6 +41,12 @@ interface Props {
   onExportKML: () => void;
   onExportSVG: () => void;
   onExportPNG: () => void;
+  has3D: boolean;
+  onOpen3D: () => void;
+  exaggeration: number;
+  onExaggerationChange: (v: number) => void;
+  basemap3d: Basemap3D;
+  onBasemap3DChange: (v: Basemap3D) => void;
 }
 
 export function ControlPanel({
@@ -57,6 +66,12 @@ export function ControlPanel({
   onExportKML,
   onExportSVG,
   onExportPNG,
+  has3D,
+  onOpen3D,
+  exaggeration,
+  onExaggerationChange,
+  basemap3d,
+  onBasemap3DChange,
 }: Props) {
   return (
     <div className="flex flex-col gap-4">
@@ -147,6 +162,55 @@ export function ControlPanel({
           </CardContent>
         </Card>
       )}
+
+      {/* Visualisation 3D */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Box className="h-4 w-4 text-primary" />
+            Visualisation 3D
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-sm font-medium text-foreground">Exagération verticale</label>
+              <span className="text-xs text-muted-foreground tabular-nums">×{exaggeration.toFixed(1)}</span>
+            </div>
+            <Slider
+              value={[exaggeration]}
+              min={1}
+              max={5}
+              step={0.1}
+              onValueChange={(v) => onExaggerationChange(v[0])}
+            />
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-foreground mb-1.5 block">Fond 3D</label>
+            <Select value={basemap3d} onValueChange={(v) => onBasemap3DChange(v as Basemap3D)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="satellite">Photo aérienne</SelectItem>
+                <SelectItem value="plan">Plan IGN</SelectItem>
+                <SelectItem value="none">Relief (teinte hypsométrique)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <Button variant="secondary" className="w-full" disabled={!has3D} onClick={onOpen3D}>
+            <Box className="h-4 w-4" />
+            Vue 3D du terrain
+          </Button>
+          {!has3D && (
+            <p className="text-xs text-muted-foreground text-center">
+              Générez d'abord les courbes pour activer la 3D.
+            </p>
+          )}
+        </CardContent>
+      </Card>
 
       {centroid && <ClimateCard lat={centroid.lat} lon={centroid.lon} />}
 

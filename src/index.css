@@ -134,3 +134,11 @@
 [data-radix-popper-content-wrapper] {
   z-index: 1100 !important;
 }
+
+/* Animation du sens d'écoulement (calque 💧) */
+@keyframes flow-dash {
+  to { stroke-dashoffset: -60; }
+}
+.flow-line {
+  animation: flow-dash 2.4s linear infinite;
+}

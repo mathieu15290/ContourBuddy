@@ -11,6 +11,8 @@ import { LayersPanel } from "@/components/LayersPanel";
 import { DEFAULT_LAYERS, type LayerState, type LayerId } from "@/lib/layers";
 import type { PolygonSelection } from "@/lib/polygon-utils";
 import { computeTerrain, type TerrainGrid } from "@/lib/terrain";
+import { computeFlowLines, defaultSeedStep, DEFAULT_FLOW_RENDER, type FlowRenderStyle } from "@/lib/flow";
+import { Terrain3D, type Basemap3D, type Marker3D } from "@/components/Terrain3D";
 import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "@/hooks/use-theme";
 import { Moon, Sun, Upload, MoreVertical, PanelLeftClose, PanelLeftOpen } from "lucide-react";
@@ -42,6 +44,10 @@ const Index = () => {
   const [importedTrack, setImportedTrack] = useState<{ points: TrackPoint[]; name: string } | null>(null);
   const [layers, setLayers] = useState<LayerState[]>(DEFAULT_LAYERS);
   const [polygon, setPolygon] = useState<PolygonSelection | null>(null);
+  const [flowRender, setFlowRender] = useState<FlowRenderStyle>(DEFAULT_FLOW_RENDER);
+  const [exaggeration, setExaggeration] = useState(1.5);
+  const [basemap3d, setBasemap3d] = useState<Basemap3D>("satellite");
+  const [open3D, setOpen3D] = useState(false);
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const { toast } = useToast();
@@ -51,6 +57,30 @@ const Index = () => {
     () => (grid ? computeTerrain(grid) : null),
     [grid]
   );
+
+  const flowLines = useMemo(() => {
+    if (!grid) return [];
+    const base = defaultSeedStep(grid);
+    const seedStep = Math.max(2, Math.round(base / Math.max(flowRender.density, 0.1)));
+    return computeFlowLines(grid, { seedStep });
+  }, [grid, flowRender.density]);
+
+  const markers3D = useMemo<Marker3D[]>(() => {
+    const out: Marker3D[] = [];
+    if (importedTrack?.points.length) {
+      const pts = importedTrack.points;
+      out.push({ lat: pts[0][0], lon: pts[0][1], label: `${importedTrack.name} — départ` });
+      const last = pts[pts.length - 1];
+      out.push({ lat: last[0], lon: last[1], label: "Arrivée" });
+    }
+    if (profileData?.length) {
+      const hi = profileData.reduce((a, b) => (b.elevation > a.elevation ? b : a));
+      const lo = profileData.reduce((a, b) => (b.elevation < a.elevation ? b : a));
+      out.push({ lat: hi.lat, lon: hi.lon, label: `Point haut ${Math.round(hi.elevation)} m` });
+      out.push({ lat: lo.lat, lon: lo.lon, label: `Point bas ${Math.round(lo.elevation)} m` });
+    }
+    return out;
+  }, [importedTrack, profileData]);
 
   const handleAddressSelect = useCallback((lon: number, lat: number, label: string) => {
     setCenter([lat, lon]);
@@ -179,6 +209,12 @@ const Index = () => {
     onExportKML: () => contours && exportKML(contours),
     onExportSVG: () => contours && exportSVG(contours, "courbes-niveaux", polygon),
     onExportPNG: handleExportPNG,
+    has3D: !!grid,
+    onOpen3D: () => setOpen3D(true),
+    exaggeration,
+    onExaggerationChange: setExaggeration,
+    basemap3d,
+    onBasemap3DChange: setBasemap3d,
   };
 
   return (
@@ -294,9 +330,16 @@ const Index = () => {
             layers={layers}
             onPolygonChanged={handlePolygonChanged}
             terrain={terrain}
+            flowLines={flowLines}
+            flowRender={flowRender}
           />
 
-          <LayersPanel layers={layers} onChange={updateLayer} />
+          <LayersPanel
+            layers={layers}
+            onChange={updateLayer}
+            flowRender={flowRender}
+            onFlowRenderChange={(patch) => setFlowRender((prev) => ({ ...prev, ...patch }))}
+          />
 
           {profileLoading && (
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-[1000] bg-card text-foreground text-sm px-4 py-2 rounded-md shadow-md border border-border">
@@ -310,6 +353,17 @@ const Index = () => {
 
         </main>
       </div>
+
+      <Terrain3D
+        open={open3D}
+        onOpenChange={setOpen3D}
+        grid={grid}
+        contours={contours}
+        flowLines={flowLines}
+        exaggeration={exaggeration}
+        basemap={basemap3d}
+        markers={markers3D}
+      />
     </div>
   );
 };

@@ -11,6 +11,7 @@ import {
   type PolygonSelection,
 } from "@/lib/polygon-utils";
 import { renderTerrainCanvas, type TerrainGrid } from "@/lib/terrain";
+import { smoothFlowPoints, flowDashArray, DEFAULT_FLOW_RENDER, type FlowLine, type FlowRenderStyle } from "@/lib/flow";
 import { fetchSoilUcsAtPoint } from "@/lib/soil-info";
 import { fetchGeologyAtPoint, geologyAgronomy } from "@/lib/geology-info";
 
@@ -37,6 +38,8 @@ interface Props {
   layers: LayerState[];
   onPolygonChanged?: (polygon: PolygonSelection | null) => void;
   terrain?: TerrainGrid | null;
+  flowLines?: FlowLine[];
+  flowRender?: FlowRenderStyle;
 }
 
 const POLY_COLOR = "hsl(152, 45%, 28%)";
@@ -128,9 +131,12 @@ export function ContourMap({
   layers = [],
   onPolygonChanged,
   terrain = null,
+  flowLines = [],
+  flowRender = DEFAULT_FLOW_RENDER,
 }: Props) {
   const leafletMapRef = useRef<L.Map | null>(null);
   const contourLayerRef = useRef<L.LayerGroup | null>(null);
+  const flowLayerRef = useRef<L.LayerGroup | null>(null);
   const externalLayersRef = useRef<Partial<Record<LayerId, L.Layer>>>({});
   const slopeOverlayRef = useRef<L.ImageOverlay | null>(null);
   const aspectOverlayRef = useRef<L.ImageOverlay | null>(null);
@@ -802,6 +808,51 @@ export function ContourMap({
       }
     }
   }, [contours, minElev, maxElev, layers, polygonInfo]);
+
+  // Écoulement d'eau (D8) — polylignes animées
+  useEffect(() => {
+    const map = leafletMapRef.current;
+    if (!map) return;
+    if (!flowLayerRef.current) flowLayerRef.current = L.layerGroup();
+    const group = flowLayerRef.current;
+    group.clearLayers();
+
+    const state = layers.find((l) => l.id === "flow");
+    if (!state?.visible || !flowLines.length) {
+      if (map.hasLayer(group)) map.removeLayer(group);
+      return;
+    }
+
+    const weight = Math.max(0.6, 1.6 * flowRender.width);
+    const dash = flowDashArray(flowRender.kind, weight);
+    const clipPoly = polygonInfo?.coordinates ?? null;
+
+    for (const fl of flowLines) {
+      const smoothed = smoothFlowPoints(fl.points, 2);
+      const coords = smoothed.map(([lon, lat]) => [lon, lat] as LonLat);
+      const segments = clipPoly ? clipPolylineToPolygon(coords, clipPoly) : [coords];
+      for (const seg of segments) {
+        if (seg.length < 2) continue;
+        L.polyline(
+          seg.map(([lon, lat]) => [lat, lon] as [number, number]),
+          {
+            color: "#2b7fd4",
+            weight,
+            opacity: state.opacity,
+            lineCap: "round",
+            dashArray: dash,
+            className: dash ? "flow-line" : undefined,
+            interactive: false,
+          }
+        ).addTo(group);
+      }
+    }
+
+    if (!map.hasLayer(group)) group.addTo(map);
+    group.eachLayer((l) => (l as L.Polyline).bringToFront?.());
+  }, [flowLines, flowRender, layers, polygonInfo]);
+
+
 
   // Build / refresh slope + aspect raster overlays whenever terrain or polygon changes
   useEffect(() => {
