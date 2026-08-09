@@ -24,6 +24,8 @@ interface Props {
   grid: ElevationGrid | null;
   contours: ContourResult | null;
   flowLines: FlowLine[];
+  flowRender?: FlowRenderStyle;
+  onFlowRenderChange?: (patch: Partial<FlowRenderStyle>) => void;
   exaggeration: number;
   onExaggerationChange?: (v: number) => void;
   basemap: Basemap3D;
