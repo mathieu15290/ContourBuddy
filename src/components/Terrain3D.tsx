@@ -111,20 +111,42 @@ async function buildBasemapTexture(
   mctx.fillStyle = "#9db38a";
   mctx.fillRect(0, 0, mosaic.width, mosaic.height);
 
-  const loadTile = (x: number, y: number) =>
-    new Promise<void>((resolve) => {
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.onload = () => {
-        if (!signal.aborted) mctx.drawImage(img, (x - x0) * TILE, (y - y0) * TILE, TILE, TILE);
-        resolve();
-      };
-      img.onerror = () => resolve();
-      img.src =
-        `https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0` +
-        `&LAYER=${encodeURIComponent(cfg.layer)}&STYLE=normal&FORMAT=${encodeURIComponent(cfg.format)}` +
-        `&TILEMATRIXSET=PM&TILEMATRIX=${zoom}&TILEROW=${y}&TILECOL=${x}`;
-    });
+  let drawn = 0;
+
+  const tileUrl = (x: number, y: number, bust?: number) =>
+    `https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0` +
+    `&LAYER=${encodeURIComponent(cfg.layer)}&STYLE=normal&FORMAT=${encodeURIComponent(cfg.format)}` +
+    `&TILEMATRIXSET=PM&TILEMATRIX=${zoom}&TILEROW=${y}&TILECOL=${x}` +
+    // Clé de cache distincte de celle des tuiles Leaflet (chargées sans CORS) :
+    // sinon la première requête 3D réutilise une entrée sans en-têtes CORS et échoue.
+    `&_ctx=3d${bust ? `&_r=${bust}` : ""}`;
+
+  const fetchTile = async (x: number, y: number, bust?: number) => {
+    const res = await fetch(tileUrl(x, y, bust), { mode: "cors", signal });
+    if (!res.ok) throw new Error(String(res.status));
+    const blob = await res.blob();
+    const bmp = await createImageBitmap(blob);
+    if (!signal.aborted) {
+      mctx.drawImage(bmp, (x - x0) * TILE, (y - y0) * TILE, TILE, TILE);
+      drawn++;
+    }
+    bmp.close?.();
+  };
+
+  const loadTile = async (x: number, y: number) => {
+    try {
+      await fetchTile(x, y);
+    } catch {
+      if (signal.aborted) return;
+      // Nouvelle tentative en contournant tout cache défectueux.
+      try {
+        await fetchTile(x, y, Date.now());
+      } catch {
+        /* tuile manquante : le fond de secours reste visible */
+      }
+    }
+  };
+
 
   const jobs: Promise<void>[] = [];
   for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) jobs.push(loadTile(x, y));
