@@ -275,11 +275,20 @@ function TerrainMesh({
 
   return (
     <mesh geometry={geometry} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+      {/* La clé force la recréation du matériau : ajouter/retirer une map sur un
+          matériau déjà compilé ne déclenche pas de recompilation du shader. */}
       {texture ? (
-        <meshStandardMaterial map={texture} roughness={0.95} metalness={0} />
+        <meshStandardMaterial
+          key={texture.uuid}
+          map={texture}
+          vertexColors={false}
+          roughness={0.95}
+          metalness={0}
+        />
       ) : (
-        <meshStandardMaterial vertexColors roughness={0.95} metalness={0} />
+        <meshStandardMaterial key="hypso" vertexColors roughness={0.95} metalness={0} />
       )}
+
     </mesh>
   );
 }
