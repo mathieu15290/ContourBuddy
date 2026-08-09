@@ -6,8 +6,9 @@ import { Slider } from "@/components/ui/slider";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { ElevationGrid } from "@/lib/elevation";
 import type { ContourResult } from "@/lib/contours";
-import { smoothFlowPoints, type FlowLine } from "@/lib/flow";
-import { Loader2 } from "lucide-react";
+import { smoothFlowPoints, type FlowLine, type FlowRenderStyle, DEFAULT_FLOW_RENDER } from "@/lib/flow";
+import { Loader2, Droplets } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export type Basemap3D = "satellite" | "plan" | "none";
 
