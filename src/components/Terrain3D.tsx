@@ -6,8 +6,9 @@ import { Slider } from "@/components/ui/slider";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { ElevationGrid } from "@/lib/elevation";
 import type { ContourResult } from "@/lib/contours";
-import { smoothFlowPoints, type FlowLine } from "@/lib/flow";
-import { Loader2 } from "lucide-react";
+import { smoothFlowPoints, type FlowLine, type FlowRenderStyle, DEFAULT_FLOW_RENDER } from "@/lib/flow";
+import { Loader2, Droplets } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export type Basemap3D = "satellite" | "plan" | "none";
 
@@ -23,6 +24,8 @@ interface Props {
   grid: ElevationGrid | null;
   contours: ContourResult | null;
   flowLines: FlowLine[];
+  flowRender?: FlowRenderStyle;
+  onFlowRenderChange?: (patch: Partial<FlowRenderStyle>) => void;
   exaggeration: number;
   onExaggerationChange?: (v: number) => void;
   basemap: Basemap3D;
@@ -275,10 +278,12 @@ function FlowOverlay({
   grid,
   flowLines,
   exaggeration,
+  flowRender,
 }: {
   grid: ElevationGrid;
   flowLines: FlowLine[];
   exaggeration: number;
+  flowRender: FlowRenderStyle;
 }) {
   const proj = useMemo(() => makeProjector(grid), [grid]);
   const paths = useMemo(
@@ -292,17 +297,33 @@ function FlowOverlay({
     [flowLines, proj, exaggeration]
   );
 
-  const lines = useMemo(
-    () =>
-      paths.map(
-        (p) =>
-          new THREE.Line(
-            new THREE.BufferGeometry().setFromPoints(p),
-            new THREE.LineBasicMaterial({ color: "#2b7fd4", transparent: true, opacity: 0.9 })
-          )
-      ),
-    [paths]
-  );
+  const { kind, width, speed } = flowRender;
+
+  const lines = useMemo(() => {
+    if (kind === "dots") return [];
+    const mat =
+      kind === "dashes"
+        ? new THREE.LineDashedMaterial({
+            color: "#2b7fd4",
+            dashSize: Math.max(4, width * 4),
+            gapSize: Math.max(4, width * 4),
+            transparent: true,
+            opacity: 0.9,
+            linewidth: Math.min(4, Math.max(1, width)),
+          })
+        : new THREE.LineBasicMaterial({
+            color: "#2b7fd4",
+            transparent: true,
+            opacity: 0.9,
+            linewidth: Math.min(4, Math.max(1, width)),
+          });
+    return paths.map((p) => {
+      const geo = new THREE.BufferGeometry().setFromPoints(p);
+      const line = new THREE.Line(geo, mat.clone());
+      if (kind === "dashes") line.computeLineDistances();
+      return line;
+    });
+  }, [paths, kind, width]);
 
   useEffect(
     () => () => lines.forEach((l) => { l.geometry.dispose(); (l.material as THREE.Material).dispose(); }),
@@ -321,7 +342,7 @@ function FlowOverlay({
     for (let i = 0; i < count; i++) {
       const p = paths[i];
       if (!p || p.length < 2) continue;
-      const f = ((t * 0.18 + i * 0.137) % 1) * (p.length - 1);
+      const f = ((t * 0.18 * Math.max(0, speed) + i * 0.137) % 1) * (p.length - 1);
       const i0 = Math.floor(f);
       const v = p[i0].clone().lerp(p[Math.min(i0 + 1, p.length - 1)], f - i0);
       dummy.position.copy(v);
@@ -331,6 +352,11 @@ function FlowOverlay({
     mesh.instanceMatrix.needsUpdate = true;
   });
 
+  const dotRadius = useMemo(
+    () => Math.max(2, (proj.widthM / 400) * width),
+    [proj.widthM, width]
+  );
+
   return (
     <group>
       {lines.map((l, i) => (
@@ -338,7 +364,7 @@ function FlowOverlay({
       ))}
       {count > 0 && (
         <instancedMesh ref={dotsRef} args={[undefined as never, undefined as never, count]}>
-          <sphereGeometry args={[Math.max(2, proj.widthM / 400), 8, 8]} />
+          <sphereGeometry args={[dotRadius, 8, 8]} />
           <meshBasicMaterial color="#8fd0ff" />
         </instancedMesh>
       )}
@@ -395,6 +421,83 @@ function CameraRig({ radius }: { radius: number }) {
   return null;
 }
 
+function Flow3DControls({
+  flowRender,
+  onChange,
+}: {
+  flowRender: FlowRenderStyle;
+  onChange: (patch: Partial<FlowRenderStyle>) => void;
+}) {
+  const kinds: { id: FlowRenderStyle["kind"]; label: string }[] = [
+    { id: "dots", label: "Points" },
+    { id: "dashes", label: "Pointillés" },
+    { id: "solid", label: "Ligne" },
+  ];
+  const speed = flowRender.speed ?? 1;
+  return (
+    <div className="mt-1.5 pt-1.5 border-t border-border/60 space-y-2">
+      <div>
+        <div className="flex items-center justify-between text-[11px] text-muted-foreground mb-1">
+          <span>Densité</span>
+          <span className="tabular-nums">×{flowRender.density.toFixed(1)}</span>
+        </div>
+        <Slider
+          value={[flowRender.density]}
+          min={0.4}
+          max={3}
+          step={0.1}
+          onValueChange={(v) => onChange({ density: v[0] })}
+        />
+      </div>
+      <div>
+        <div className="flex items-center justify-between text-[11px] text-muted-foreground mb-1">
+          <span>Épaisseur</span>
+          <span className="tabular-nums">×{flowRender.width.toFixed(1)}</span>
+        </div>
+        <Slider
+          value={[flowRender.width]}
+          min={0.4}
+          max={3}
+          step={0.1}
+          onValueChange={(v) => onChange({ width: v[0] })}
+        />
+      </div>
+      <div>
+        <div className="flex items-center justify-between text-[11px] text-muted-foreground mb-1">
+          <span>Rapidité</span>
+          <span className="tabular-nums">{speed === 0 ? "figé" : `×${speed.toFixed(1)}`}</span>
+        </div>
+        <Slider
+          value={[speed]}
+          min={0}
+          max={3}
+          step={0.1}
+          onValueChange={(v) => onChange({ speed: v[0] })}
+        />
+      </div>
+      <div>
+        <div className="text-[11px] text-muted-foreground mb-1">Nature du trait</div>
+        <div className="grid grid-cols-3 gap-1">
+          {kinds.map((k) => (
+            <button
+              key={k.id}
+              onClick={() => onChange({ kind: k.id })}
+              className={cn(
+                "text-[11px] rounded-md border px-1 py-1 transition-colors",
+                flowRender.kind === k.id
+                  ? "border-primary bg-primary/15 text-primary"
+                  : "border-border text-muted-foreground hover:bg-muted"
+              )}
+            >
+              {k.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // -----------------------------------------------------------------------------
 export function Terrain3D({
   open,
@@ -402,6 +505,8 @@ export function Terrain3D({
   grid,
   contours,
   flowLines,
+  flowRender,
+  onFlowRenderChange,
   exaggeration,
   onExaggerationChange,
   basemap,
@@ -480,7 +585,7 @@ export function Terrain3D({
                     <ContourOverlay grid={grid} contours={contours} exaggeration={exaggeration} />
                   )}
                   {showFlow && flowLines.length > 0 && (
-                    <FlowOverlay grid={grid} flowLines={flowLines} exaggeration={exaggeration} />
+                    <FlowOverlay grid={grid} flowLines={flowLines} exaggeration={exaggeration} flowRender={flowRender ?? DEFAULT_FLOW_RENDER} />
                   )}
                   {showMarkers && markers.length > 0 && (
                     <MarkersOverlay grid={grid} markers={markers} exaggeration={exaggeration} />
@@ -517,11 +622,15 @@ export function Terrain3D({
                 </div>
               )}
 
-              <div className="absolute top-3 left-3 flex flex-col gap-1.5 bg-card/90 backdrop-blur-sm border border-border rounded-lg p-2.5 shadow-lg text-sm">
+              <div className="absolute top-3 left-3 flex flex-col gap-1.5 bg-card/90 backdrop-blur-sm border border-border rounded-lg p-2.5 shadow-lg text-sm max-w-[16rem]">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input type="checkbox" checked={showFlow} onChange={(e) => setShowFlow(e.target.checked)} />
-                  💧 Écoulement d'eau
+                  <Droplets className="h-3.5 w-3.5 text-sky-500" />
+                  <span className="flex-1">Écoulement d'eau</span>
                 </label>
+                {showFlow && onFlowRenderChange && (
+                  <Flow3DControls flowRender={flowRender ?? DEFAULT_FLOW_RENDER} onChange={onFlowRenderChange} />
+                )}
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input type="checkbox" checked={showContours} onChange={(e) => setShowContours(e.target.checked)} />
                   ⛰️ Courbes de niveaux
