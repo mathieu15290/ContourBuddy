@@ -803,6 +803,51 @@ export function ContourMap({
     }
   }, [contours, minElev, maxElev, layers, polygonInfo]);
 
+  // Écoulement d'eau (D8) — polylignes animées
+  useEffect(() => {
+    const map = leafletMapRef.current;
+    if (!map) return;
+    if (!flowLayerRef.current) flowLayerRef.current = L.layerGroup();
+    const group = flowLayerRef.current;
+    group.clearLayers();
+
+    const state = layers.find((l) => l.id === "flow");
+    if (!state?.visible || !flowLines.length) {
+      if (map.hasLayer(group)) map.removeLayer(group);
+      return;
+    }
+
+    const weight = Math.max(0.6, 1.6 * flowRender.width);
+    const dash = flowDashArray(flowRender.kind, weight);
+    const clipPoly = polygonInfo?.coordinates ?? null;
+
+    for (const fl of flowLines) {
+      const smoothed = smoothFlowPoints(fl.points, 2);
+      const coords = smoothed.map(([lon, lat]) => [lon, lat] as LonLat);
+      const segments = clipPoly ? clipPolylineToPolygon(coords, clipPoly) : [coords];
+      for (const seg of segments) {
+        if (seg.length < 2) continue;
+        L.polyline(
+          seg.map(([lon, lat]) => [lat, lon] as [number, number]),
+          {
+            color: "#2b7fd4",
+            weight,
+            opacity: state.opacity,
+            lineCap: "round",
+            dashArray: dash,
+            className: dash ? "flow-line" : undefined,
+            interactive: false,
+          }
+        ).addTo(group);
+      }
+    }
+
+    if (!map.hasLayer(group)) group.addTo(map);
+    group.bringToFront();
+  }, [flowLines, flowRender, layers, polygonInfo]);
+
+
+
   // Build / refresh slope + aspect raster overlays whenever terrain or polygon changes
   useEffect(() => {
     const map = leafletMapRef.current;
