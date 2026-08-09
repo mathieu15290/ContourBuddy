@@ -27,6 +27,8 @@ interface Props {
   basemap: Basemap3D;
   onBasemapChange?: (b: Basemap3D) => void;
   markers?: Marker3D[];
+  /** Calques du panneau 2D, drapés sur le terrain en 3D. */
+  layers?: LayerState[];
 }
 
 const MAX_SEGMENTS = 250;
@@ -485,6 +487,7 @@ export function Terrain3D({
   basemap,
   onBasemapChange,
   markers = [],
+  layers,
 }: Props) {
   const [texture, setTexture] = useState<THREE.CanvasTexture | null>(null);
   const [loadingTex, setLoadingTex] = useState(false);
