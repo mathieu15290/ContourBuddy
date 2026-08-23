@@ -26,6 +26,7 @@ export type LayerId =
   | "satellite"
   | "cadastre"
   | "lidar"
+  | "lidarMns"
   | "contours"
   | "labels"
   | "track"
@@ -133,6 +134,7 @@ export const EXTERNAL_LAYER_CONFIGS: Partial<Record<LayerId, ExternalLayerConfig
   satellite: wmts("ORTHOIMAGERY.ORTHOPHOTOS", { format: "image/jpeg" }),
   cadastre: wmts("CADASTRALPARCELS.PARCELLAIRE_EXPRESS", { style: "PCI vecteur" }),
   lidar: wmts("IGNF_LIDAR-HD_MNT_ELEVATION.ELEVATIONGRIDCOVERAGE.SHADOW", { matrixSet: "PM_0_18", maxZoom: 18 }),
+  lidarMns: wmts("IGNF_LIDAR-HD_MNS_ELEVATION.ELEVATIONGRIDCOVERAGE.SHADOW", { matrixSet: "PM_0_18", maxZoom: 18 }),
   hydro: wmts("HYDROGRAPHY.HYDROGRAPHY", { matrixSet: "PM_6_18", maxZoom: 18 }),
   natura2000: {
     kind: "group",
@@ -188,6 +190,7 @@ export const DEFAULT_LAYERS: LayerState[] = [
   { id: "slope",    label: "Pentes (permaculture)",  section: "topo", visible: false, opacity: 0.6 },
   { id: "aspect",   label: "Exposition (azimut)",    section: "topo", visible: false, opacity: 0.6 },
   { id: "lidar",    label: "LIDAR HD (ombrage MNT)", section: "topo", visible: false, opacity: 0.7 },
+  { id: "lidarMns", label: "LIDAR HD (ombrage MNS)", section: "topo", visible: false, opacity: 0.7 },
   { id: "track",    label: "Trace importée",         section: "topo", visible: true,  opacity: 0.9 },
 
   // — Environnement —

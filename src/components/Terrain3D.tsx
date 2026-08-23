@@ -10,7 +10,7 @@ import { smoothFlowPoints, type FlowLine, type FlowRenderStyle, DEFAULT_FLOW_REN
 import { Loader2, Droplets } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type Basemap3D = "satellite" | "plan" | "lidar" | "none";
+export type Basemap3D = "satellite" | "plan" | "lidar" | "lidarMns" | "none";
 
 export interface Marker3D {
   lat: number;
@@ -67,6 +67,13 @@ const TILE_LAYERS: Record<
   plan: { layer: "GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2", format: "image/png", ext: "png" },
   lidar: {
     layer: "IGNF_LIDAR-HD_MNT_ELEVATION.ELEVATIONGRIDCOVERAGE.SHADOW",
+    format: "image/png",
+    ext: "png",
+    matrixSet: "PM_0_18",
+    maxZoom: 18,
+  },
+  lidarMns: {
+    layer: "IGNF_LIDAR-HD_MNS_ELEVATION.ELEVATIONGRIDCOVERAGE.SHADOW",
     format: "image/png",
     ext: "png",
     matrixSet: "PM_0_18",
@@ -682,7 +689,8 @@ export function Terrain3D({
                   {([
                     { id: "satellite", label: "Photo aérienne" },
                     { id: "plan", label: "Plan IGN" },
-                    { id: "lidar", label: "LIDAR HD" },
+                    { id: "lidar", label: "LIDAR MNT" },
+                    { id: "lidarMns", label: "LIDAR MNS" },
                     { id: "none", label: "Relief" },
                   ] as { id: Basemap3D; label: string }[]).map((b) => (
                     <button
