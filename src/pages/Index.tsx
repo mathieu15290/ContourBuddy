@@ -15,7 +15,8 @@ import { computeFlowLines, defaultSeedStep, DEFAULT_FLOW_RENDER, type FlowRender
 import { Terrain3D, type Basemap3D, type Marker3D } from "@/components/Terrain3D";
 import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "@/hooks/use-theme";
-import { Moon, Sun, Upload, MoreVertical, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { Moon, Sun, Upload, MoreVertical, PanelLeftClose, PanelLeftOpen, BarChart3 } from "lucide-react";
+import { Link } from "react-router-dom";
 import logo from "@/assets/logo.png";
 import {
   DropdownMenu,
@@ -248,6 +249,13 @@ const Index = () => {
             <Upload className="h-4 w-4" />
             <span className="hidden md:inline">Importer GPX/KML</span>
           </button>
+          <Link
+            to="/stats"
+            title="Statistiques de fréquentation"
+            className="hidden sm:inline-flex items-center justify-center min-h-[44px] min-w-[44px] rounded-md hover:bg-muted transition-colors text-muted-foreground"
+          >
+            <BarChart3 className="h-5 w-5" />
+          </Link>
           <p className="hidden lg:block text-xs text-muted-foreground">
             Données © IGN – RGE ALTI®
           </p>
@@ -276,6 +284,9 @@ const Index = () => {
               <DropdownMenuItem onClick={toggleTheme} className="min-h-[44px] text-sm">
                 {dark ? <Sun className="h-4 w-4 mr-2" /> : <Moon className="h-4 w-4 mr-2" />}
                 {dark ? "Thème clair" : "Thème sombre"}
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild className="min-h-[44px] text-sm">
+                <Link to="/stats"><BarChart3 className="h-4 w-4 mr-2" /> Statistiques</Link>
               </DropdownMenuItem>
               <DropdownMenuItem disabled className="text-xs text-muted-foreground">
                 Données © IGN – RGE ALTI®
