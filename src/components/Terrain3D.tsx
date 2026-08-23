@@ -689,7 +689,8 @@ export function Terrain3D({
                   {([
                     { id: "satellite", label: "Photo aérienne" },
                     { id: "plan", label: "Plan IGN" },
-                    { id: "lidar", label: "LIDAR HD" },
+                    { id: "lidar", label: "LIDAR MNT" },
+                    { id: "lidarMns", label: "LIDAR MNS" },
                     { id: "none", label: "Relief" },
                   ] as { id: Basemap3D; label: string }[]).map((b) => (
                     <button
