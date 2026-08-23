@@ -248,6 +248,13 @@ const Index = () => {
             <Upload className="h-4 w-4" />
             <span className="hidden md:inline">Importer GPX/KML</span>
           </button>
+          <Link
+            to="/stats"
+            title="Statistiques de fréquentation"
+            className="hidden sm:inline-flex items-center justify-center min-h-[44px] min-w-[44px] rounded-md hover:bg-muted transition-colors text-muted-foreground"
+          >
+            <BarChart3 className="h-5 w-5" />
+          </Link>
           <p className="hidden lg:block text-xs text-muted-foreground">
             Données © IGN – RGE ALTI®
           </p>
