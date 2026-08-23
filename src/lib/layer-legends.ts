@@ -47,6 +47,22 @@ export const LAYER_LEGENDS: Partial<Record<LayerId, LegendDef>> = {
     },
   },
 
+  lidarMns: {
+    title: "LIDAR HD — ombrage MNS",
+    source: "IGN — LIDAR HD (surface : sol + bâti + végétation)",
+    entries: [
+      { color: "#111111", label: "Faces à l'ombre (bâti, canopée)" },
+      { color: "#7a7a7a", label: "Surfaces intermédiaires" },
+      { color: "#ececec", label: "Faces éclairées (NW)" },
+    ],
+    footer: {
+      label: "Documentation LIDAR HD (IGN)",
+      href: "https://geoservices.ign.fr/lidarhd",
+    },
+  },
+
+
+
   hydro: {
     title: "Hydrographie (BD TOPO)",
     source: "IGN — BD TOPO®",
