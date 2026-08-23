@@ -285,6 +285,9 @@ const Index = () => {
                 {dark ? <Sun className="h-4 w-4 mr-2" /> : <Moon className="h-4 w-4 mr-2" />}
                 {dark ? "Thème clair" : "Thème sombre"}
               </DropdownMenuItem>
+              <DropdownMenuItem asChild className="min-h-[44px] text-sm">
+                <Link to="/stats"><BarChart3 className="h-4 w-4 mr-2" /> Statistiques</Link>
+              </DropdownMenuItem>
               <DropdownMenuItem disabled className="text-xs text-muted-foreground">
                 Données © IGN – RGE ALTI®
               </DropdownMenuItem>
