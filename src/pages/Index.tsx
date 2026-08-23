@@ -15,7 +15,8 @@ import { computeFlowLines, defaultSeedStep, DEFAULT_FLOW_RENDER, type FlowRender
 import { Terrain3D, type Basemap3D, type Marker3D } from "@/components/Terrain3D";
 import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "@/hooks/use-theme";
-import { Moon, Sun, Upload, MoreVertical, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { Moon, Sun, Upload, MoreVertical, PanelLeftClose, PanelLeftOpen, BarChart3 } from "lucide-react";
+import { Link } from "react-router-dom";
 import logo from "@/assets/logo.png";
 import {
   DropdownMenu,
