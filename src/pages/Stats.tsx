@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import {
   ResponsiveContainer,
@@ -15,7 +15,9 @@ import {
   Tooltip,
   Legend,
 } from "recharts";
-import { ArrowLeft, Users, Eye, Timer, MousePointerClick, Globe, Smartphone, Monitor } from "lucide-react";
+import { ArrowLeft, Users, Eye, Timer, MousePointerClick, Globe, Smartphone, Monitor, RefreshCw, Radio } from "lucide-react";
+import { fetchLiveStats, type LiveStats } from "@/lib/visit-tracker";
+
 import {
   STATS_PERIOD,
   STATS_TOTALS,
@@ -125,6 +127,58 @@ const Stats = () => {
   const maxSource = Math.max(...SOURCES.map((s) => s.visitors));
   const maxCountry = Math.max(...COUNTRIES.map((c) => c.visitors));
 
+  // --- Mesure temps réel (compteur maison) ---
+  const [live, setLive] = useState<LiveStats | null>(null);
+  const [liveDays, setLiveDays] = useState(30);
+  const [loadingLive, setLoadingLive] = useState(true);
+
+  const loadLive = useCallback(async (days: number) => {
+    setLoadingLive(true);
+    const data = await fetchLiveStats(days);
+    setLive(data);
+    setLoadingLive(false);
+  }, []);
+
+  useEffect(() => {
+    loadLive(liveDays);
+    const id = setInterval(() => loadLive(liveDays), 60_000);
+    const onFocus = () => loadLive(liveDays);
+    window.addEventListener("focus", onFocus);
+    return () => {
+      clearInterval(id);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [liveDays, loadLive]);
+
+  const liveDaily = useMemo(
+    () => (live?.daily ?? []).map((d) => ({ ...d, label: fmtDate(d.date) })),
+    [live]
+  );
+
+  const liveList = (items: { name: string; visitors: number }[] | undefined, accent = false) => {
+    const list = (items ?? []).slice(0, 8);
+    const max = Math.max(1, ...list.map((i) => i.visitors));
+    return (
+      <ul className="space-y-2">
+        {list.length === 0 && <li className="text-sm text-muted-foreground">Aucune donnée pour l'instant.</li>}
+        {list.map((i) => (
+          <li key={i.name}>
+            <div className="flex justify-between text-sm text-foreground">
+              <span className="truncate">{i.name}</span>
+              <span className="text-muted-foreground tabular-nums ml-2">{i.visitors}</span>
+            </div>
+            <div className="h-1.5 rounded-full bg-muted mt-1 overflow-hidden">
+              <div
+                className={`h-full rounded-full ${accent ? "bg-accent" : "bg-primary"}`}
+                style={{ width: `${(i.visitors / max) * 100}%` }}
+              />
+            </div>
+          </li>
+        ))}
+      </ul>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-card px-4 py-3 flex items-center gap-3 safe-top safe-x">
@@ -140,9 +194,114 @@ const Stats = () => {
         <div>
           <h1 className="text-2xl font-bold text-foreground">Statistiques d'audience — ContourBuddyApp</h1>
           <p className="text-sm text-muted-foreground">
+            Mesure temps réel (mise à jour automatique toutes les minutes) + instantané historique.
+          </p>
+        </div>
+
+        {/* ---------- Temps réel ---------- */}
+        <section className="rounded-lg border border-border bg-card p-4 space-y-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <h2 className="text-sm font-semibold text-foreground inline-flex items-center gap-2">
+              <Radio className="h-4 w-4 text-primary" /> Fréquentation en temps réel
+            </h2>
+            <div className="flex gap-1 ml-auto">
+              {[1, 7, 30, 90].map((d) => (
+                <button
+                  key={d}
+                  onClick={() => setLiveDays(d)}
+                  className={`min-h-[36px] px-3 rounded-md text-xs border transition-colors ${
+                    liveDays === d
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "border-border text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {d === 1 ? "24 h" : `${d} j`}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => loadLive(liveDays)}
+              className="min-h-[36px] px-3 rounded-md border border-border text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${loadingLive ? "animate-spin" : ""}`} /> Actualiser
+            </button>
+          </div>
+
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <Kpi icon={Users} label="Visiteurs" value={String(live?.totals.visitors ?? 0)} hint="sessions uniques" />
+            <Kpi icon={Eye} label="Pages vues" value={String(live?.totals.pageviews ?? 0)} />
+            <Kpi
+              icon={MousePointerClick}
+              label="Pages / visite"
+              value={
+                live && live.totals.visitors > 0
+                  ? (live.totals.pageviews / live.totals.visitors).toFixed(2)
+                  : "—"
+              }
+            />
+            <Kpi
+              icon={Timer}
+              label="Dernière mise à jour"
+              value={
+                live ? new Date(live.generated_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) : "—"
+              }
+              hint="auto toutes les 60 s"
+            />
+          </div>
+
+          <div className="h-56">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={liveDaily} margin={{ top: 8, right: 8, bottom: 0, left: -20 }}>
+                <defs>
+                  <linearGradient id="gLive" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.5} />
+                    <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0.05} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="label" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} allowDecimals={false} />
+                <Tooltip {...chartTooltip} />
+                <Legend wrapperStyle={{ fontSize: 12 }} />
+                <Area type="monotone" dataKey="visitors" name="Visiteurs" stroke="hsl(var(--primary))" fill="url(#gLive)" strokeWidth={2} />
+                <Area type="monotone" dataKey="pageviews" name="Pages vues" stroke="hsl(var(--accent))" fill="transparent" strokeWidth={2} strokeDasharray="4 3" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div>
+              <h3 className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Sources</h3>
+              {liveList(live?.sources)}
+            </div>
+            <div>
+              <h3 className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Appareils</h3>
+              {liveList(live?.devices, true)}
+            </div>
+            <div>
+              <h3 className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Navigateurs</h3>
+              {liveList(live?.browsers)}
+            </div>
+            <div>
+              <h3 className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Systèmes</h3>
+              {liveList(live?.systems, true)}
+            </div>
+          </div>
+
+          <p className="text-xs text-muted-foreground">
+            Compteur interne anonyme (sans cookie ni donnée personnelle), démarré aujourd'hui&nbsp;: les valeurs se
+            remplissent au fil des visites.
+          </p>
+        </section>
+
+        {/* ---------- Instantané historique ---------- */}
+        <div>
+          <h2 className="text-lg font-bold text-foreground">Instantané historique</h2>
+          <p className="text-sm text-muted-foreground">
             Période&nbsp;: {STATS_PERIOD.label} · données anonymes de l'application publiée
           </p>
         </div>
+
 
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
           <Kpi icon={Users} label="Visiteurs" value={String(STATS_TOTALS.visitors)} hint="visiteurs uniques" />

@@ -47,12 +47,48 @@ export type Database = {
         }
         Relationships: []
       }
+      site_visits: {
+        Row: {
+          browser: string | null
+          device: string | null
+          id: string
+          lang: string | null
+          occurred_at: string
+          os: string | null
+          path: string
+          referrer_host: string | null
+          session_id: string
+        }
+        Insert: {
+          browser?: string | null
+          device?: string | null
+          id?: string
+          lang?: string | null
+          occurred_at?: string
+          os?: string | null
+          path?: string
+          referrer_host?: string | null
+          session_id: string
+        }
+        Update: {
+          browser?: string | null
+          device?: string | null
+          id?: string
+          lang?: string | null
+          occurred_at?: string
+          os?: string | null
+          path?: string
+          referrer_host?: string | null
+          session_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      site_visit_stats: { Args: { _days?: number }; Returns: Json }
     }
     Enums: {
       [_ in never]: never
