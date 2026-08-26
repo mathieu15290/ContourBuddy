@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import {
   ResponsiveContainer,
@@ -15,7 +15,9 @@ import {
   Tooltip,
   Legend,
 } from "recharts";
-import { ArrowLeft, Users, Eye, Timer, MousePointerClick, Globe, Smartphone, Monitor } from "lucide-react";
+import { ArrowLeft, Users, Eye, Timer, MousePointerClick, Globe, Smartphone, Monitor, RefreshCw, Radio } from "lucide-react";
+import { fetchLiveStats, type LiveStats } from "@/lib/visit-tracker";
+
 import {
   STATS_PERIOD,
   STATS_TOTALS,
