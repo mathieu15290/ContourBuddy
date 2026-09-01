@@ -214,6 +214,7 @@ export function ContourMap({
           <a href="#" title="Dessiner un rectangle" style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;font-size:20px;cursor:pointer;background:white;" id="draw-rect-btn">▭</a>
           <a href="#" title="Dessiner un polygone" style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;font-size:18px;cursor:pointer;background:white;" id="draw-poly-btn">⬠</a>
           <a href="#" title="Dessiner un profil altimétrique" style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;font-size:18px;cursor:pointer;background:white;" id="draw-profile-btn">📈</a>
+          <a href="#" title="Mesurer une distance (clic = point, double-clic = terminer)" style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;font-size:18px;cursor:pointer;background:white;" id="draw-measure-btn">📏</a>
         `;
         L.DomEvent.disableClickPropagation(container);
         return container;
