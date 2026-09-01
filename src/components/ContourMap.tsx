@@ -1401,6 +1401,38 @@ export function ContourMap({
           Touchez pour tracer — appui long pour terminer
         </div>
       )}
+      {drawingMeasure && (
+        <>
+          <div className="absolute top-2 left-1/2 -translate-x-1/2 z-[1000] bg-card text-foreground text-xs sm:text-sm px-3 py-1.5 rounded-md shadow-md border border-border max-w-[90vw] text-center">
+            Cliquez pour ajouter des points — double-clic (ou 📏) pour terminer
+            {measureTotal > 0 && (
+              <span className="ml-2 font-semibold">
+                ({measureTotal >= 1000 ? `${(measureTotal / 1000).toFixed(2)} km` : `${Math.round(measureTotal)} m`})
+              </span>
+            )}
+          </div>
+          <div className="absolute top-12 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-2">
+            <button
+              onClick={() => finishMeasureRef.current?.()}
+              className="bg-primary text-primary-foreground text-xs sm:text-sm px-4 py-2 rounded-md shadow-md font-medium hover:opacity-90 transition-opacity"
+            >
+              ✓ Terminer
+            </button>
+            <button
+              onClick={() => { clearMeasureRef.current?.(); finishMeasureRef.current?.(); }}
+              className="bg-card text-foreground text-xs sm:text-sm px-3 py-2 rounded-md shadow-md border border-border hover:bg-muted transition-colors"
+            >
+              Effacer
+            </button>
+          </div>
+        </>
+      )}
+      {measureTotal > 0 && !drawingMeasure && (
+        <div className="absolute left-2 z-[1200] bg-card text-foreground text-xs px-2.5 py-1.5 rounded-md shadow-md border border-border flex items-center gap-2 bottom-[calc(env(safe-area-inset-bottom)+7.5rem)] md:bottom-12">
+          <span>📏 {measureTotal >= 1000 ? `${(measureTotal / 1000).toFixed(2)} km` : `${Math.round(measureTotal)} m`}</span>
+          <button onClick={() => clearMeasureRef.current?.()} className="underline hover:no-underline">Effacer</button>
+        </div>
+      )}
       {hasPolygon && (
         <button
           onClick={handleResetPolygon}
