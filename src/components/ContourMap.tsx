@@ -876,6 +876,9 @@ export function ContourMap({
       container.removeEventListener("touchstart", onSharedTouchStart);
       container.removeEventListener("touchmove", onSharedTouchMove);
       container.removeEventListener("touchend", onSharedTouchEnd);
+      container.removeEventListener("touchstart", onMeasureTouchStart);
+      container.removeEventListener("touchmove", onMeasureTouchMove);
+      container.removeEventListener("touchend", onMeasureTouchEnd);
       map.remove();
       leafletMapRef.current = null;
     };
