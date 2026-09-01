@@ -172,6 +172,19 @@ export function ContourMap({
   const finishPolygonRef = useRef<(() => void) | null>(null);
   const [polygonInProgressCount, setPolygonInProgressCount] = useState(0);
 
+  // Measure tool state
+  const [drawingMeasure, setDrawingMeasure] = useState(false);
+  const drawingMeasureRef = useRef(false);
+  const measurePointsRef = useRef<L.LatLng[]>([]);
+  const measurePolylineRef = useRef<L.Polyline | null>(null);
+  const measureLiveLineRef = useRef<L.Polyline | null>(null);
+  const measureMarkersRef = useRef<L.CircleMarker[]>([]);
+  const measureTooltipsRef = useRef<L.Marker[]>([]);
+  const measureTotalLabelRef = useRef<L.Marker | null>(null);
+  const [measureTotal, setMeasureTotal] = useState(0);
+  const clearMeasureRef = useRef<(() => void) | null>(null);
+  const finishMeasureRef = useRef<(() => void) | null>(null);
+
   // Initialize map
   useEffect(() => {
     if (!mapRef.current || leafletMapRef.current) return;
