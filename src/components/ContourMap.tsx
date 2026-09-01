@@ -638,13 +638,163 @@ export function ContourMap({
     map.on("click", onMapClick);
     map.on("dblclick", onMapDblClick);
 
+    // ========================================================================
+    // MEASURE TOOL (distance)
+    // ========================================================================
+    const segLabelIcon = (text: string) => L.divIcon({
+      className: "measure-seg-label",
+      html: `<div style="background:white;border:1px solid hsl(20,40%,40%);color:hsl(20,40%,25%);font-size:11px;font-weight:600;padding:1px 5px;border-radius:3px;box-shadow:0 1px 2px rgba(0,0,0,.2);white-space:nowrap;">${text}</div>`,
+      iconSize: [0, 0],
+      iconAnchor: [0, 0],
+    });
+    const totalLabelIcon = (text: string) => L.divIcon({
+      className: "measure-total-label",
+      html: `<div style="background:hsl(20,40%,40%);color:white;font-size:12px;font-weight:700;padding:3px 8px;border-radius:4px;box-shadow:0 2px 4px rgba(0,0,0,.25);white-space:nowrap;">Total : ${text}</div>`,
+      iconSize: [0, 0],
+      iconAnchor: [0, -8],
+    });
+    const formatDist = (m: number): string =>
+      m >= 1000 ? `${(m / 1000).toFixed(m >= 10000 ? 1 : 2)} km` : `${m < 10 ? m.toFixed(1) : Math.round(m)} m`;
+
+    const refreshMeasure = () => {
+      const pts = measurePointsRef.current;
+      if (pts.length >= 2) {
+        if (measurePolylineRef.current) {
+          measurePolylineRef.current.setLatLngs(pts);
+        } else {
+          measurePolylineRef.current = L.polyline(pts, { color: "hsl(20, 40%, 35%)", weight: 3 }).addTo(map);
+        }
+      } else if (measurePolylineRef.current) {
+        map.removeLayer(measurePolylineRef.current);
+        measurePolylineRef.current = null;
+      }
+      measureTooltipsRef.current.forEach((t) => map.removeLayer(t));
+      measureTooltipsRef.current = [];
+      let total = 0;
+      for (let i = 1; i < pts.length; i++) {
+        const d = pts[i - 1].distanceTo(pts[i]);
+        total += d;
+        const mid = L.latLng((pts[i - 1].lat + pts[i].lat) / 2, (pts[i - 1].lng + pts[i].lng) / 2);
+        measureTooltipsRef.current.push(
+          L.marker(mid, { icon: segLabelIcon(formatDist(d)), interactive: false }).addTo(map)
+        );
+      }
+      if (measureTotalLabelRef.current) {
+        map.removeLayer(measureTotalLabelRef.current);
+        measureTotalLabelRef.current = null;
+      }
+      if (pts.length >= 2) {
+        measureTotalLabelRef.current = L.marker(pts[pts.length - 1], {
+          icon: totalLabelIcon(formatDist(total)),
+          interactive: false,
+        }).addTo(map);
+      }
+      setMeasureTotal(total);
+    };
+
+    const addMeasurePoint = (latlng: L.LatLng) => {
+      measurePointsRef.current.push(latlng);
+      measureMarkersRef.current.push(
+        L.circleMarker(latlng, {
+          radius: 5,
+          color: "hsl(20, 40%, 35%)",
+          fillColor: "white",
+          fillOpacity: 1,
+          weight: 2,
+        }).addTo(map)
+      );
+      refreshMeasure();
+    };
+
+    const clearMeasure = () => {
+      measurePointsRef.current = [];
+      if (measurePolylineRef.current) { map.removeLayer(measurePolylineRef.current); measurePolylineRef.current = null; }
+      if (measureLiveLineRef.current) { map.removeLayer(measureLiveLineRef.current); measureLiveLineRef.current = null; }
+      measureMarkersRef.current.forEach((m) => map.removeLayer(m));
+      measureMarkersRef.current = [];
+      measureTooltipsRef.current.forEach((m) => map.removeLayer(m));
+      measureTooltipsRef.current = [];
+      if (measureTotalLabelRef.current) { map.removeLayer(measureTotalLabelRef.current); measureTotalLabelRef.current = null; }
+      setMeasureTotal(0);
+    };
+
+    const finishMeasure = () => {
+      drawingMeasureRef.current = false;
+      setDrawingMeasure(false);
+      map.getContainer().style.cursor = "";
+      map.doubleClickZoom.enable();
+      if (measureLiveLineRef.current) { map.removeLayer(measureLiveLineRef.current); measureLiveLineRef.current = null; }
+    };
+
+    clearMeasureRef.current = clearMeasure;
+    finishMeasureRef.current = finishMeasure;
+
+    const onMeasureClick = (e: L.LeafletMouseEvent) => {
+      if (!drawingMeasureRef.current) return;
+      addMeasurePoint(e.latlng);
+    };
+    const onMeasureMove = (e: L.LeafletMouseEvent) => {
+      if (!drawingMeasureRef.current) return;
+      const pts = measurePointsRef.current;
+      if (pts.length === 0) return;
+      const last = pts[pts.length - 1];
+      if (measureLiveLineRef.current) {
+        measureLiveLineRef.current.setLatLngs([last, e.latlng]);
+      } else {
+        measureLiveLineRef.current = L.polyline([last, e.latlng], {
+          color: "hsl(20, 40%, 35%)",
+          weight: 2,
+          dashArray: "4,4",
+          opacity: 0.7,
+        }).addTo(map);
+      }
+    };
+    const onMeasureDblClick = (e: L.LeafletMouseEvent) => {
+      if (!drawingMeasureRef.current) return;
+      L.DomEvent.stopPropagation(e);
+      finishMeasure();
+    };
+
+    map.on("click", onMeasureClick);
+    map.on("mousemove", onMeasureMove);
+    map.on("dblclick", onMeasureDblClick);
+
+    // Touch: tap adds a point, long-press finishes
+    let measureTapTimer: ReturnType<typeof setTimeout> | null = null;
+    let measureTouchMoved = false;
+    const onMeasureTouchStart = (e: TouchEvent) => {
+      if (!drawingMeasureRef.current || e.touches.length !== 1) return;
+      measureTouchMoved = false;
+      measureTapTimer = setTimeout(() => {
+        if (!measureTouchMoved && drawingMeasureRef.current) finishMeasure();
+        measureTapTimer = null;
+      }, 600);
+    };
+    const onMeasureTouchMove = () => {
+      if (!drawingMeasureRef.current) return;
+      measureTouchMoved = true;
+      if (measureTapTimer) { clearTimeout(measureTapTimer); measureTapTimer = null; }
+    };
+    const onMeasureTouchEnd = (e: TouchEvent) => {
+      if (!drawingMeasureRef.current) return;
+      if (measureTapTimer) { clearTimeout(measureTapTimer); measureTapTimer = null; }
+      if (!measureTouchMoved && e.changedTouches.length === 1) {
+        addMeasurePoint(getLatLngFromTouch(e.changedTouches[0]));
+      }
+    };
+    container.addEventListener("touchstart", onMeasureTouchStart, { passive: true });
+    container.addEventListener("touchmove", onMeasureTouchMove, { passive: true });
+    container.addEventListener("touchend", onMeasureTouchEnd, { passive: true });
+
     // Button click handlers
     setTimeout(() => {
       const exitOtherModes = () => {
         drawingRef.current = false; setDrawing(false);
         drawingProfileRef.current = false; setDrawingProfile(false);
         drawingPolygonRef.current = false; setDrawingPolygon(false);
+        if (drawingMeasureRef.current) finishMeasure();
       };
+
 
       const btn = document.getElementById("draw-rect-btn");
       if (btn) {
