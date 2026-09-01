@@ -850,6 +850,23 @@ export function ContourMap({
           }
         });
       }
+
+      const measureBtn = document.getElementById("draw-measure-btn");
+      if (measureBtn) {
+        measureBtn.addEventListener("click", (e) => {
+          e.preventDefault();
+          if (drawingMeasureRef.current) {
+            finishMeasure();
+            return;
+          }
+          exitOtherModes();
+          clearMeasure();
+          drawingMeasureRef.current = true;
+          setDrawingMeasure(true);
+          map.getContainer().style.cursor = "crosshair";
+          map.doubleClickZoom.disable();
+        });
+      }
     }, 0);
 
     return () => {
