@@ -298,9 +298,16 @@ const Index = () => {
 
       {/* Main */}
       <div className="flex flex-1 overflow-hidden relative">
-        {/* Desktop / Tablet Sidebar (collapsible on tablet) */}
+        {/* Backdrop mobile */}
         {!sidebarCollapsed && (
-          <aside className="w-72 sm:w-80 border-r border-border bg-card overflow-y-auto p-4 shrink-0 safe-x">
+          <div
+            className="sm:hidden absolute inset-0 z-[1050] bg-foreground/40"
+            onClick={() => setSidebarCollapsed(true)}
+          />
+        )}
+        {/* Panneau : overlay sur smartphone, colonne sur tablette/desktop */}
+        {!sidebarCollapsed && (
+          <aside className="absolute inset-y-0 left-0 z-[1060] w-[85%] max-w-xs shadow-2xl sm:static sm:z-auto sm:w-80 sm:max-w-none sm:shadow-none border-r border-border bg-card overflow-y-auto p-4 shrink-0 safe-x">
             <ControlPanel {...controlPanelProps} />
             {!bounds && !contours && (
               <div className="mt-6 text-center text-sm text-muted-foreground px-2">
@@ -310,6 +317,7 @@ const Index = () => {
             )}
           </aside>
         )}
+
 
         {/* Map */}
         <main className="flex-1 relative" style={{ overscrollBehavior: "none" }}>
