@@ -327,7 +327,7 @@ const Index = () => {
           <button
             onClick={() => setSidebarCollapsed((v) => !v)}
             title={sidebarCollapsed ? "Afficher le panneau" : "Masquer le panneau"}
-            className="inline-flex items-center justify-center absolute top-2 left-2 z-[1000] min-h-[44px] min-w-[44px] rounded-md bg-card border border-border shadow-md text-foreground hover:bg-muted transition-colors"
+            className="inline-flex items-center justify-center absolute top-2 left-2 z-[1200] min-h-[44px] min-w-[44px] rounded-md bg-card border border-border shadow-md text-foreground hover:bg-muted transition-colors"
           >
             {sidebarCollapsed ? <PanelLeftOpen className="h-5 w-5" /> : <PanelLeftClose className="h-5 w-5" />}
           </button>

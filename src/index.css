@@ -120,6 +120,12 @@
     overscroll-behavior: none;
   }
 
+  /* Laisse la place au bouton d'ouverture du panneau (haut-gauche) */
+  .leaflet-top.leaflet-left {
+    margin-top: 52px;
+  }
+
+
   .safe-top { padding-top: env(safe-area-inset-top); }
   .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
   .safe-x {
