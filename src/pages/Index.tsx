@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useMemo } from "react";
+import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { AddressSearch } from "@/components/AddressSearch";
 import { ContourMap } from "@/components/ContourMap";
 import { ControlPanel } from "@/components/ControlPanel";
@@ -190,6 +190,42 @@ const Index = () => {
   const updateLayer = useCallback((id: LayerId, patch: Partial<LayerState>) => {
     setLayers((prev) => prev.map((l) => (l.id === id ? { ...l, ...patch } : l)));
   }, []);
+
+  // Ouverture / fermeture du panneau au doigt (swipe horizontal)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    let startX = 0, startY = 0, tracking = false;
+
+    const onStart = (e: TouchEvent) => {
+      if (e.touches.length !== 1) return;
+      if (window.innerWidth >= 640) return;
+      const t = e.touches[0];
+      startX = t.clientX;
+      startY = t.clientY;
+      // ouvrir : départ depuis le bord gauche ; fermer : n'importe où quand ouvert
+      tracking = sidebarCollapsed ? startX <= 28 : true;
+    };
+
+    const onEnd = (e: TouchEvent) => {
+      if (!tracking) return;
+      tracking = false;
+      const t = e.changedTouches[0];
+      if (!t) return;
+      const dx = t.clientX - startX;
+      const dy = t.clientY - startY;
+      if (Math.abs(dx) < 60 || Math.abs(dy) > Math.abs(dx)) return;
+      if (dx > 0 && sidebarCollapsed) setSidebarCollapsed(false);
+      else if (dx < 0 && !sidebarCollapsed) setSidebarCollapsed(true);
+    };
+
+    window.addEventListener("touchstart", onStart, { passive: true });
+    window.addEventListener("touchend", onEnd, { passive: true });
+    return () => {
+      window.removeEventListener("touchstart", onStart);
+      window.removeEventListener("touchend", onEnd);
+    };
+  }, [sidebarCollapsed]);
+
 
   const controlPanelProps = {
     interval,
